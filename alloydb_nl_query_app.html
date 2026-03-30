@@ -1,0 +1,420 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans)}
+.wrap{padding:1rem 0}
+.header{display:flex;align-items:center;gap:12px;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:0.5px solid var(--color-border-tertiary)}
+.badge{background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);padding:4px 10px;font-size:12px;color:var(--color-text-secondary);font-family:var(--font-mono)}
+.hinfo h2{font-size:18px;font-weight:500;color:var(--color-text-primary)}
+.hinfo p{font-size:13px;color:var(--color-text-secondary);margin-top:2px}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:1.5rem}
+.stat{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:12px;text-align:center}
+.stat-val{font-size:22px;font-weight:500;color:var(--color-text-primary)}
+.stat-lbl{font-size:11px;color:var(--color-text-tertiary);margin-top:2px;text-transform:uppercase;letter-spacing:.05em}
+.qbox{background:var(--color-background-primary);border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-lg);padding:1rem;margin-bottom:1rem}
+.qlabel{font-size:11px;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px}
+.qrow{display:flex;gap:8px}
+.qrow input{flex:1;padding:8px 12px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-secondary);color:var(--color-text-primary);font-size:14px;outline:none}
+.qrow input:focus{border-color:var(--color-border-info);box-shadow:0 0 0 3px var(--color-background-info)}
+.btn{padding:8px 16px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-primary);color:var(--color-text-primary);font-size:13px;cursor:pointer;white-space:nowrap;transition:background .15s}
+.btn:hover{background:var(--color-background-secondary)}
+.btn:active{transform:scale(.98)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-primary{background:var(--color-text-primary);color:var(--color-background-primary);border-color:var(--color-text-primary)}
+.btn-primary:hover{opacity:.85;background:var(--color-text-primary)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.chip{background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:999px;padding:4px 12px;font-size:12px;color:var(--color-text-secondary);cursor:pointer;transition:all .15s}
+.chip:hover{border-color:var(--color-border-info);color:var(--color-text-info);background:var(--color-background-info)}
+.steps{display:flex;gap:16px;margin-bottom:12px;flex-wrap:wrap}
+.step{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--color-text-tertiary)}
+.step.active{color:var(--color-text-info)}
+.step.done{color:var(--color-text-success)}
+.step.err{color:var(--color-text-danger)}
+.sdot{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0}
+.step.active .sdot{animation:blink .7s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+.sql-block{background:var(--color-background-secondary);border-left:2px solid var(--color-border-info);border-radius:0;padding:10px 14px;margin-bottom:10px;font-family:var(--font-mono);font-size:12px;color:var(--color-text-info);white-space:pre-wrap;word-break:break-all}
+.sql-lbl{font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px}
+.summary{background:var(--color-background-success);border:0.5px solid var(--color-border-success);border-radius:var(--border-radius-md);padding:10px 14px;margin-bottom:10px;font-size:13px;color:var(--color-text-success)}
+.sum-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px;opacity:.7}
+.err-box{background:var(--color-background-danger);border:0.5px solid var(--color-border-danger);border-radius:var(--border-radius-md);padding:10px 14px;margin-bottom:10px;font-size:13px;color:var(--color-text-danger)}
+.res-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.res-hdr span{font-size:13px;font-weight:500;color:var(--color-text-primary)}
+.count-pill{background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:999px;padding:2px 10px;font-size:11px;color:var(--color-text-secondary);font-family:var(--font-mono)}
+.tbl-wrap{overflow-x:auto;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg)}
+table{width:100%;border-collapse:collapse;font-size:13px;table-layout:auto}
+thead th{background:var(--color-background-secondary);color:var(--color-text-secondary);font-size:11px;text-transform:uppercase;letter-spacing:.06em;font-weight:500;padding:8px 12px;text-align:left;border-bottom:0.5px solid var(--color-border-tertiary);white-space:nowrap}
+tbody tr{border-bottom:0.5px solid var(--color-border-tertiary)}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:var(--color-background-secondary)}
+tbody td{padding:7px 12px;color:var(--color-text-primary);vertical-align:top;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+td.num{color:var(--color-text-success);font-family:var(--font-mono)}
+td.rate{color:var(--color-text-warning);font-family:var(--font-mono)}
+td.lo{color:var(--color-text-danger);font-family:var(--font-mono)}
+.empty{text-align:center;padding:2rem;color:var(--color-text-tertiary);font-size:13px}
+.tabs{display:flex;gap:4px;margin-bottom:1rem}
+.tab{padding:6px 14px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-tertiary);background:transparent;color:var(--color-text-secondary);font-size:13px;cursor:pointer}
+.tab.on{background:var(--color-background-secondary);color:var(--color-text-primary);border-color:var(--color-border-secondary)}
+.info-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:1rem}
+.info-card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:12px}
+.info-card h4{font-size:12px;font-weight:500;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.info-card p{font-size:12px;color:var(--color-text-primary);line-height:1.6;font-family:var(--font-mono)}
+</style>
+
+<div class="wrap">
+
+<div class="header">
+  <div>
+    <div class="hinfo">
+      <h2>AlloyDB natural language query</h2>
+      <p>AI-enabled database — query your data in plain English</p>
+    </div>
+  </div>
+  <div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap">
+    <span class="badge">PostgreSQL</span>
+    <span class="badge">Claude AI</span>
+    <span class="badge" id="dbBadge">20 rows</span>
+  </div>
+</div>
+
+<div class="stats">
+  <div class="stat"><div class="stat-val">20</div><div class="stat-lbl">Products</div></div>
+  <div class="stat"><div class="stat-val">5</div><div class="stat-lbl">Categories</div></div>
+  <div class="stat"><div class="stat-val" id="avgPrice">$74</div><div class="stat-lbl">Avg price</div></div>
+  <div class="stat"><div class="stat-val" id="topRated">4.9</div><div class="stat-lbl">Top rating</div></div>
+</div>
+
+<div class="tabs">
+  <button class="tab on" onclick="switchTab('query',this)">Query</button>
+  <button class="tab" onclick="switchTab('browse',this)">Browse all</button>
+  <button class="tab" onclick="switchTab('schema',this)">Schema</button>
+</div>
+
+<div id="tab-query">
+  <div class="qbox">
+    <div class="qlabel">Ask anything about the products database</div>
+    <div class="qrow">
+      <input id="qinput" type="text" placeholder="e.g. Show me electronics under $100 with rating above 4.5" autocomplete="off"/>
+      <button class="btn btn-primary" id="runBtn" onclick="runQuery()">Run</button>
+    </div>
+    <div class="chips" id="chips"></div>
+  </div>
+
+  <div id="steps" class="steps" style="display:none">
+    <div class="step" id="s1"><span class="sdot"></span>Generating SQL</div>
+    <div class="step" id="s2"><span class="sdot"></span>Querying database</div>
+    <div class="step" id="s3"><span class="sdot"></span>Summarising</div>
+  </div>
+
+  <div id="errBox" class="err-box" style="display:none"></div>
+
+  <div id="sqlWrap" style="display:none">
+    <div class="sql-lbl">Generated SQL</div>
+    <div class="sql-block" id="sqlText"></div>
+  </div>
+
+  <div id="sumWrap" style="display:none">
+    <div class="summary">
+      <div class="sum-lbl">AI summary</div>
+      <div id="sumText"></div>
+    </div>
+  </div>
+
+  <div id="resWrap" style="display:none">
+    <div class="res-hdr">
+      <span>Results</span>
+      <span class="count-pill" id="cnt">0 rows</span>
+    </div>
+    <div class="tbl-wrap">
+      <table><thead id="qHead"></thead><tbody id="qBody"></tbody></table>
+    </div>
+  </div>
+</div>
+
+<div id="tab-browse" style="display:none">
+  <div class="res-hdr">
+    <span>All products</span>
+    <span class="count-pill">20 rows</span>
+  </div>
+  <div class="tbl-wrap">
+    <table><thead id="bHead"></thead><tbody id="bBody"></tbody></table>
+  </div>
+</div>
+
+<div id="tab-schema" style="display:none">
+  <div class="info-row">
+    <div class="info-card">
+      <h4>Table: products</h4>
+      <p>id · SERIAL PRIMARY KEY<br>name · TEXT NOT NULL<br>category · TEXT NOT NULL<br>price · NUMERIC(10,2)<br>stock · INTEGER<br>rating · NUMERIC(3,1)<br>description · TEXT</p>
+    </div>
+    <div class="info-card">
+      <h4>Categories</h4>
+      <p>Electronics<br>Kitchen<br>Sports<br>Furniture<br>Home</p>
+    </div>
+  </div>
+  <div class="info-card" style="margin-bottom:8px">
+    <h4>AlloyDB features used</h4>
+    <p>pgvector extension enabled · Connection pooling · ILIKE full-text search · Parameterised queries · JSON result serialisation</p>
+  </div>
+  <div class="info-card">
+    <h4>AI pipeline</h4>
+    <p>1. NL question → Claude NL→SQL prompt → SELECT query<br>2. SQL safety validation (SELECT-only guard)<br>3. Execute on AlloyDB via psycopg2 pool<br>4. Results → Claude summariser → plain-English answer</p>
+  </div>
+</div>
+
+</div>
+
+<script>
+const DB = [
+  {id:1,name:"Wireless Noise-Cancelling Headphones",category:"Electronics",price:149.99,stock:35,rating:4.7,description:"Over-ear ANC headphones, 30-hour battery."},
+  {id:2,name:"Ergonomic Office Chair",category:"Furniture",price:329.00,stock:12,rating:4.5,description:"Lumbar-support mesh chair, all-day comfort."},
+  {id:3,name:"Stainless Steel Water Bottle",category:"Kitchen",price:24.95,stock:120,rating:4.8,description:"32 oz double-walled, cold 24h / hot 12h."},
+  {id:4,name:"Mechanical Keyboard",category:"Electronics",price:89.99,stock:60,rating:4.6,description:"TKL, Cherry MX Brown switches, RGB."},
+  {id:5,name:"Yoga Mat Premium",category:"Sports",price:45.00,stock:80,rating:4.4,description:"6mm non-slip TPE foam, alignment lines."},
+  {id:6,name:"Air Purifier HEPA",category:"Home",price:199.00,stock:25,rating:4.3,description:"500 sq ft coverage, 99.97% filtration."},
+  {id:7,name:"Portable Bluetooth Speaker",category:"Electronics",price:59.99,stock:45,rating:4.5,description:"IPX7 waterproof, 360 sound, 12h playback."},
+  {id:8,name:'Cast Iron Skillet 12"',category:"Kitchen",price:39.95,stock:70,rating:4.9,description:"Pre-seasoned, all cooktops inc. induction."},
+  {id:9,name:"Standing Desk Converter",category:"Furniture",price:249.00,stock:18,rating:4.2,description:"Sit-stand riser, gas-spring lift."},
+  {id:10,name:"Running Shoes Pro",category:"Sports",price:119.99,stock:55,rating:4.6,description:"Breathable mesh upper, responsive foam."},
+  {id:11,name:"Smart LED Desk Lamp",category:"Electronics",price:49.99,stock:90,rating:4.5,description:"Touch-control, 5 colour temps, USB-C."},
+  {id:12,name:"French Press Coffee Maker",category:"Kitchen",price:34.99,stock:65,rating:4.7,description:"8-cup borosilicate glass, double-screen."},
+  {id:13,name:"Foam Roller Deep Tissue",category:"Sports",price:29.99,stock:100,rating:4.3,description:"High-density EVA, 36-inch full-back."},
+  {id:14,name:"Weighted Blanket 15lb",category:"Home",price:79.00,stock:40,rating:4.6,description:"Glass-bead fill, 48x72\" cotton shell."},
+  {id:15,name:"Noise Machine Sleep",category:"Home",price:44.95,stock:55,rating:4.8,description:"30 sounds, timer, compact bedside."},
+  {id:16,name:"4K Webcam Pro",category:"Electronics",price:99.99,stock:30,rating:4.4,description:"4K autofocus, ring light, noise-cancel mic."},
+  {id:17,name:"Bamboo Cutting Board Set",category:"Kitchen",price:32.00,stock:85,rating:4.6,description:"3-piece, juice groove, antimicrobial."},
+  {id:18,name:"Resistance Bands Set",category:"Sports",price:19.99,stock:150,rating:4.5,description:"5 resistance levels, latex-free."},
+  {id:19,name:"Electric Kettle 1.7L",category:"Kitchen",price:44.99,stock:60,rating:4.7,description:"1500W rapid boil, 6 temp presets."},
+  {id:20,name:"Monitor Light Bar",category:"Electronics",price:35.99,stock:75,rating:4.5,description:"Auto-dimming sensor, USB-C power."},
+];
+
+const SCHEMA = `Table: products
+Columns: id, name, category, price (USD), stock (units), rating (0-5), description
+Categories: Electronics, Kitchen, Sports, Furniture, Home
+Total rows: 20`;
+
+const NL2SQL_SYSTEM = `You are a precise PostgreSQL query generator for a products table.
+${SCHEMA}
+RULES:
+1. Output ONLY a valid SQL SELECT. No markdown, no fences, no semicolons, no explanation.
+2. Use only columns: id, name, category, price, stock, rating, description
+3. Add LIMIT 20 unless the user asks for more.
+4. Use ILIKE for text matching (case-insensitive).
+5. If the question cannot be answered, output exactly: CANNOT_ANSWER`;
+
+const SUMM_SYSTEM = `You are a data analyst. Given a question and query results, write a clear 2-3 sentence answer. Include specific numbers, names, and values. If no results, say so and suggest rephrasing.`;
+
+const EXAMPLES = [
+  "Top 5 rated products",
+  "Electronics under $100",
+  "Low stock items (under 20 units)",
+  "Best kitchen products by rating",
+  "Products between $30 and $80",
+  "Most expensive in each category",
+  "Sports items sorted by price",
+  "Products with rating above 4.7",
+  "Furniture items available",
+  "Cheapest home products",
+];
+
+const $ = id => document.getElementById(id);
+const show = el => { if(el) el.style.display="block" };
+const hide = el => { if(el) el.style.display="none" };
+const esc = s => String(s??'').replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+
+function setStep(id, state){
+  const el=$(id); if(!el) return;
+  el.className = "step"+(state?" "+state:"");
+}
+function resetSteps(){ ["s1","s2","s3"].forEach(s=>setStep(s,"")); }
+
+function switchTab(name, btn){
+  ["query","browse","schema"].forEach(t=>hide($("tab-"+t)));
+  document.querySelectorAll(".tab").forEach(b=>b.classList.remove("on"));
+  show($("tab-"+name));
+  btn.classList.add("on");
+}
+
+function buildChips(){
+  const c=$("chips");
+  c.innerHTML = EXAMPLES.map(e=>
+    `<span class="chip" onclick="fillQ(this)">${esc(e)}</span>`
+  ).join("");
+}
+
+function fillQ(el){
+  $("qinput").value = el.textContent;
+  $("qinput").focus();
+}
+
+function buildBrowse(){
+  const cols=["id","name","category","price","stock","rating","description"];
+  $("bHead").innerHTML="<tr>"+cols.map(c=>`<th>${c}</th>`).join("")+"</tr>";
+  $("bBody").innerHTML=DB.map(row=>"<tr>"+cols.map(c=>{
+    const v=row[c];
+    const cls=c==="rating"?" class='rate'":c==="price"||c==="stock"?" class='num'":(c==="stock"&&v<20?" class='lo'":"");
+    return `<td${cls} title="${esc(v)}">${esc(v)}</td>`;
+  }).join("")+"</tr>").join("");
+}
+
+function renderTable(rows, hId, bId){
+  if(!rows||rows.length===0){
+    $(bId).innerHTML=`<tr><td colspan="99" class="empty">No results matched.</td></tr>`;
+    return;
+  }
+  const cols=Object.keys(rows[0]);
+  $(hId).innerHTML="<tr>"+cols.map(c=>`<th>${esc(c)}</th>`).join("")+"</tr>";
+  $(bId).innerHTML=rows.map(row=>"<tr>"+cols.map(c=>{
+    const v=row[c];
+    const cls=c==="rating"?" class='rate'":c==="price"?" class='num'":c==="stock"&&v<20?" class='lo'":c==="stock"?" class='num'":"";
+    return `<td${cls} title="${esc(v)}">${esc(v)}</td>`;
+  }).join("")+"</tr>").join("");
+}
+
+function execSQL(sql){
+  const s=sql.trim().toUpperCase();
+  if(!s.startsWith("SELECT")) return {rows:[],error:"Only SELECT allowed."};
+  try {
+    let rows=[...DB];
+    const lower=sql.toLowerCase();
+
+    const whereM=lower.match(/where\s+(.+?)(?:order\s+by|group\s+by|limit|$)/s);
+    if(whereM){
+      const cond=whereM[1].trim();
+      rows=rows.filter(r=>{
+        try{ return evalWhere(cond,r); }catch{ return true; }
+      });
+    }
+
+    const orderM=lower.match(/order\s+by\s+(\w+)(?:\s+(asc|desc))?/);
+    if(orderM){
+      const col=orderM[1], dir=orderM[2]==="desc"?-1:1;
+      rows.sort((a,b)=>{
+        const av=a[col]??0, bv=b[col]??0;
+        return typeof av==="number"?(av-bv)*dir:String(av).localeCompare(String(bv))*dir;
+      });
+    }
+
+    const limitM=lower.match(/limit\s+(\d+)/);
+    if(limitM) rows=rows.slice(0,parseInt(limitM[1]));
+
+    const selM=sql.match(/SELECT\s+(.+?)\s+FROM/i);
+    if(selM&&selM[1].trim()!=="*"){
+      const selCols=selM[1].split(",").map(c=>{
+        const asM=c.match(/\w+\s+as\s+(\w+)/i);
+        return asM?asM[1]:c.trim().split(/[\s.(]/)[0].toLowerCase();
+      }).filter(c=>Object.keys(DB[0]).includes(c));
+      if(selCols.length>0){
+        rows=rows.map(r=>{
+          const out={};
+          selCols.forEach(c=>{if(r[c]!==undefined)out[c]=r[c];});
+          return out;
+        });
+      }
+    }
+
+    return {rows,error:null};
+  } catch(e){
+    return {rows:[],error:e.message};
+  }
+}
+
+function evalWhere(cond, row){
+  let c=cond;
+  c=c.replace(/\band\b/gi," && ").replace(/\bor\b/gi," || ");
+  c=c.replace(/(\w+)\s+ilike\s+'([^']+)'/gi,(m,col,pat)=>{
+    const v=String(row[col.toLowerCase()]??"").toLowerCase();
+    const p=pat.replace(/%/g,".*").toLowerCase();
+    return new RegExp("^"+p+"$").test(v)?"true":"false";
+  });
+  c=c.replace(/(\w+)\s+between\s+([\d.]+)\s+and\s+([\d.]+)/gi,(m,col,lo,hi)=>{
+    const v=parseFloat(row[col.toLowerCase()]??0);
+    return(v>=parseFloat(lo)&&v<=parseFloat(hi))?"true":"false";
+  });
+  c=c.replace(/(\w+)\s*(>=|<=|!=|=|>|<)\s*([\d.]+)/g,(m,col,op,val)=>{
+    const v=parseFloat(row[col.toLowerCase()]??0);
+    const n=parseFloat(val);
+    const ops={">=":v>=n,"<=":v<=n,"!=":v!=n,"=":v==n,">":v>n,"<":v<n};
+    return ops[op]?"true":"false";
+  });
+  c=c.replace(/(\w+)\s*=\s*'([^']+)'/gi,(m,col,val)=>{
+    const v=String(row[col.toLowerCase()]??"").toLowerCase();
+    return v===val.toLowerCase()?"true":"false";
+  });
+  c=c.replace(/\b(true|false)\b/g,"$1");
+  try{ return !!Function("return "+c)(); }catch{ return true; }
+}
+
+async function callClaude(system, userMsg, maxTokens=500){
+  const resp=await fetch("https://api.anthropic.com/v1/messages",{
+    method:"POST",
+    headers:{
+      "Content-Type":"application/json",
+      "anthropic-version":"2023-06-01",
+      "anthropic-dangerous-direct-browser-access":"true",
+    },
+    body:JSON.stringify({
+      model:"claude-sonnet-4-20250514",
+      max_tokens:maxTokens,
+      system,
+      messages:[{role:"user",content:userMsg}],
+    }),
+  });
+  const data=await resp.json();
+  if(data.error) throw new Error(data.error.message||"API error");
+  return data.content.map(b=>b.text||"").join("").trim();
+}
+
+async function runQuery(){
+  const q=$("qinput").value.trim();
+  if(!q) return;
+
+  hide($("errBox")); hide($("sqlWrap")); hide($("sumWrap")); hide($("resWrap"));
+  show($("steps")); resetSteps();
+  $("runBtn").disabled=true;
+
+  try{
+    setStep("s1","active");
+    const rawSQL=await callClaude(NL2SQL_SYSTEM, q, 300);
+    if(rawSQL.startsWith("CANNOT_ANSWER")) throw new Error("Could not map question to the schema. Try asking about products, prices, categories, stock or ratings.");
+
+    const sql=rawSQL.replace(/^```(?:sql)?/im,"").replace(/```$/m,"").trim().replace(/;$/,"");
+    $("sqlText").textContent=sql;
+    show($("sqlWrap"));
+    setStep("s1","done");
+
+    setStep("s2","active");
+    const result=execSQL(sql);
+    if(result.error) throw new Error("Query error: "+result.error);
+    renderTable(result.rows,"qHead","qBody");
+    $("cnt").textContent=result.rows.length+" row"+(result.rows.length!==1?"s":"");
+    show($("resWrap"));
+    setStep("s2","done");
+
+    setStep("s3","active");
+    const summMsg=`Question: ${q}\n\nRows returned: ${result.rows.length}\nSample data:\n${JSON.stringify(result.rows.slice(0,8),null,2)}`;
+    const summary=await callClaude(SUMM_SYSTEM, summMsg, 200);
+    $("sumText").textContent=summary;
+    show($("sumWrap"));
+    setStep("s3","done");
+
+  } catch(e){
+    const active=["s1","s2","s3"].find(s=>$(s).classList.contains("active"));
+    if(active) setStep(active,"err");
+    $("errBox").textContent=e.message;
+    show($("errBox"));
+  } finally{
+    $("runBtn").disabled=false;
+  }
+}
+
+$("qinput").addEventListener("keydown",e=>{ if(e.key==="Enter") runQuery(); });
+
+buildChips();
+buildBrowse();
+
+const prices=DB.map(r=>r.price);
+const avg=(prices.reduce((a,b)=>a+b,0)/prices.length).toFixed(0);
+$("avgPrice").textContent="$"+avg;
+$("topRated").textContent=Math.max(...DB.map(r=>r.rating)).toFixed(1);
+</script>

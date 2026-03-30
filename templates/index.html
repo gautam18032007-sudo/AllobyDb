@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>AlloyDB · AI Query Interface</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#07090d;--surface:#0c1017;--card:#101720;--border:#1c2a38;
+  --border2:#263545;--accent:#00d4ff;--accent2:#7c5cfc;--green:#00e5a0;
+  --warn:#ff6b6b;--amber:#ffb547;--text:#ccd8e8;--muted:#4e6070;
+  --dim:#2a3a4a;--white:#f0f6ff;
+  --mono:'JetBrains Mono',monospace;--ui:'DM Sans',sans-serif;
+  --r:10px;--r2:14px;--r3:18px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{height:100%;scroll-behavior:smooth}
+body{min-height:100%;background:var(--bg);color:var(--text);font-family:var(--ui);font-size:14px;line-height:1.6;display:flex;flex-direction:column}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:var(--surface)}
+::-webkit-scrollbar-thumb{background:var(--dim);border-radius:2px}
+
+/* ── Layout ── */
+.app{display:grid;grid-template-rows:56px 1fr;grid-template-columns:240px 1fr 340px;height:100vh;overflow:hidden}
+
+/* ── Topbar ── */
+.topbar{grid-column:1/-1;display:flex;align-items:center;padding:0 20px;gap:16px;background:var(--surface);border-bottom:1px solid var(--border);z-index:10}
+.logo{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:13px;font-weight:600;color:var(--white);letter-spacing:.02em}
+.logo-icon{width:28px;height:28px;background:linear-gradient(135deg,var(--accent2),var(--accent));border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.topbar-sep{flex:1}
+.status-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.status-dot.ok{background:var(--green);box-shadow:0 0 6px var(--green)}
+.status-dot.err{background:var(--warn)}
+.status-dot.idle{background:var(--muted)}
+.status-label{font-family:var(--mono);font-size:11px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.topbar-badge{font-family:var(--mono);font-size:10px;background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.2);color:var(--accent);padding:2px 8px;border-radius:999px;letter-spacing:.06em}
+
+/* ── Sidebar ── */
+.sidebar{background:var(--surface);border-right:1px solid var(--border);overflow-y:auto;display:flex;flex-direction:column;gap:0}
+.nav-section{padding:16px 12px 8px;font-family:var(--mono);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.12em}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 16px;cursor:pointer;font-size:13px;color:var(--muted);transition:all .15s;border-left:2px solid transparent}
+.nav-item:hover{color:var(--text);background:rgba(255,255,255,.03)}
+.nav-item.active{color:var(--accent);background:rgba(0,212,255,.07);border-left-color:var(--accent)}
+.nav-item svg{width:15px;height:15px;flex-shrink:0;opacity:.7}
+.nav-item.active svg{opacity:1}
+.nav-divider{height:1px;background:var(--border);margin:8px 0}
+.sidebar-footer{margin-top:auto;padding:12px 16px;border-top:1px solid var(--border)}
+.schema-mini{font-family:var(--mono);font-size:10px;color:var(--muted);line-height:1.8}
+.schema-col{display:flex;gap:8px}
+.schema-col-name{color:var(--dim);min-width:70px}
+.schema-col-type{color:var(--accent2);opacity:.7}
+
+/* ── Main content ── */
+.main{overflow-y:auto;display:flex;flex-direction:column;background:var(--bg)}
+.panel{display:none;flex-direction:column;flex:1;padding:20px;gap:16px;animation:fadeIn .2s ease}
+.panel.active{display:flex}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── Stats bar ── */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px}
+.stat-val{font-size:22px;font-weight:600;font-family:var(--mono);color:var(--white)}
+.stat-lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-top:2px}
+.stat-card.accent .stat-val{color:var(--accent)}
+.stat-card.green .stat-val{color:var(--green)}
+.stat-card.amber .stat-val{color:var(--amber)}
+.stat-card.purple .stat-val{color:var(--accent2)}
+
+/* ── Query card ── */
+.query-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:18px}
+.card-label{font-family:var(--mono);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;margin-bottom:10px}
+.q-row{display:flex;gap:8px}
+.q-input{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);color:var(--white);font-family:var(--mono);font-size:13px;padding:10px 14px;outline:none;transition:border-color .2s,box-shadow .2s}
+.q-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,212,255,.1)}
+.q-input::placeholder{color:var(--muted)}
+.btn{border:1px solid var(--border2);border-radius:var(--r);font-family:var(--ui);font-size:13px;font-weight:500;padding:10px 18px;cursor:pointer;transition:all .15s;white-space:nowrap}
+.btn-run{background:linear-gradient(135deg,var(--accent2),var(--accent));border:none;color:#000;font-weight:600}
+.btn-run:hover{opacity:.88;transform:translateY(-1px)}
+.btn-run:active{transform:scale(.97)}
+.btn-run:disabled{opacity:.35;cursor:not-allowed;transform:none}
+.btn-ghost{background:transparent;color:var(--muted)}
+.btn-ghost:hover{background:var(--surface);color:var(--text)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.chip{background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:4px 12px;font-size:11px;font-family:var(--mono);color:var(--muted);cursor:pointer;transition:all .15s}
+.chip:hover{border-color:var(--accent);color:var(--accent);background:rgba(0,212,255,.06)}
+
+/* ── Pipeline steps ── */
+.pipeline{display:none;align-items:center;gap:4px;flex-wrap:wrap;margin:4px 0}
+.pipeline.show{display:flex}
+.pipe-step{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;color:var(--muted);padding:4px 10px;border-radius:var(--r);border:1px solid transparent;transition:all .2s}
+.pipe-step.active{color:var(--accent);border-color:rgba(0,212,255,.25);background:rgba(0,212,255,.07)}
+.pipe-step.done{color:var(--green);border-color:rgba(0,229,160,.2);background:rgba(0,229,160,.05)}
+.pipe-step.fail{color:var(--warn);border-color:rgba(255,107,107,.2);background:rgba(255,107,107,.05)}
+.pipe-step .dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0}
+.pipe-step.active .dot{animation:pulse .6s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.2}}
+.pipe-arrow{color:var(--muted);font-size:12px}
+
+/* ── SQL block ── */
+.sql-block{background:var(--surface);border-left:3px solid var(--accent2);border-radius:0 var(--r) var(--r) 0;padding:12px 16px;font-family:var(--mono);font-size:12px;color:#89b4d9;line-height:1.7}
+.sql-block .kw{color:var(--accent);font-weight:600}
+.sql-block .tbl{color:var(--accent2)}
+.sql-block .val{color:var(--green)}
+.block-label{font-family:var(--mono);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px}
+
+/* ── Summary box ── */
+.summary-box{background:rgba(0,229,160,.06);border:1px solid rgba(0,229,160,.18);border-radius:var(--r);padding:12px 16px;font-size:13px;color:#a0f0d0;line-height:1.65}
+.summary-box .block-label{color:rgba(0,229,160,.5)}
+
+/* ── Error box ── */
+.error-box{background:rgba(255,107,107,.07);border:1px solid rgba(255,107,107,.22);border-radius:var(--r);padding:12px 16px;font-family:var(--mono);font-size:12px;color:var(--warn);line-height:1.6}
+
+/* ── Results table ── */
+.results-hdr{display:flex;align-items:center;justify-content:space-between}
+.results-title{font-size:13px;font-weight:500;color:var(--white)}
+.count-badge{background:rgba(124,92,252,.15);border:1px solid rgba(124,92,252,.3);color:var(--accent2);font-family:var(--mono);font-size:10px;padding:2px 8px;border-radius:999px}
+.tbl-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--r2)}
+table{width:100%;border-collapse:collapse;font-size:12px;font-family:var(--mono)}
+thead th{background:rgba(0,212,255,.04);color:var(--accent);font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:9px 14px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap;font-weight:500}
+tbody tr{border-bottom:1px solid rgba(28,42,56,.7);transition:background .1s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:rgba(0,212,255,.03)}
+tbody td{padding:8px 14px;color:var(--text);max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+td.td-num{color:var(--green)}
+td.td-rate{color:var(--amber)}
+td.td-lo{color:var(--warn)}
+td.td-cat{color:var(--accent2)}
+
+/* ── Browse grid ── */
+.browse-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.product-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:14px 16px;transition:border-color .2s}
+.product-card:hover{border-color:var(--border2)}
+.pc-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px}
+.pc-name{font-size:13px;font-weight:500;color:var(--white);line-height:1.4}
+.pc-cat{font-family:var(--mono);font-size:10px;background:rgba(124,92,252,.12);border:1px solid rgba(124,92,252,.25);color:var(--accent2);padding:2px 8px;border-radius:999px;white-space:nowrap}
+.pc-desc{font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:10px}
+.pc-meta{display:flex;gap:12px}
+.pc-price{font-family:var(--mono);font-size:14px;font-weight:600;color:var(--green)}
+.pc-rating{font-family:var(--mono);font-size:12px;color:var(--amber)}
+.pc-stock{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.pc-stock.lo{color:var(--warn)}
+
+/* ── Schema panel ── */
+.schema-panel{display:flex;flex-direction:column;gap:12px}
+.schema-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:16px}
+.schema-card h3{font-size:13px;font-weight:500;color:var(--white);margin-bottom:12px}
+.schema-table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12px}
+.schema-table th{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.08em;padding:4px 12px;text-align:left;border-bottom:1px solid var(--border)}
+.schema-table td{padding:7px 12px;border-bottom:1px solid rgba(28,42,56,.5);color:var(--text)}
+.schema-table td:first-child{color:var(--accent);font-weight:500}
+.schema-table td:nth-child(2){color:var(--accent2)}
+.schema-table td:nth-child(3){color:var(--muted)}
+.arch-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.arch-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px}
+.arch-item h4{font-family:var(--mono);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px}
+.arch-item p{font-size:12px;color:var(--text);line-height:1.6}
+
+/* ── Chatbot panel ── */
+.chat-panel{background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;height:100%;overflow:hidden}
+.chat-header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0}
+.chat-avatar{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,var(--accent2),var(--accent));display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.chat-header-info h3{font-size:13px;font-weight:500;color:var(--white)}
+.chat-header-info p{font-size:11px;color:var(--muted)}
+.chat-msgs{flex:1;overflow-y:auto;padding:14px 14px 0;display:flex;flex-direction:column;gap:10px}
+.msg{display:flex;flex-direction:column;gap:4px;animation:msgIn .2s ease}
+@keyframes msgIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.msg-user{align-items:flex-end}
+.msg-bot{align-items:flex-start}
+.msg-bubble{max-width:90%;padding:9px 13px;border-radius:12px;font-size:12px;line-height:1.65}
+.msg-user .msg-bubble{background:rgba(0,212,255,.12);border:1px solid rgba(0,212,255,.2);color:var(--accent);border-bottom-right-radius:3px}
+.msg-bot .msg-bubble{background:var(--card);border:1px solid var(--border);color:var(--text);border-bottom-left-radius:3px}
+.msg-bot .msg-bubble.typing{color:var(--muted)}
+.msg-time{font-family:var(--mono);font-size:10px;color:var(--muted);padding:0 4px}
+.chat-suggestions{display:flex;flex-wrap:wrap;gap:5px;padding:10px 14px}
+.chat-sug{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:5px 10px;font-size:11px;font-family:var(--mono);color:var(--muted);cursor:pointer;transition:all .15s}
+.chat-sug:hover{border-color:var(--accent2);color:var(--accent2)}
+.chat-input-row{padding:12px 14px;border-top:1px solid var(--border);display:flex;gap:8px;flex-shrink:0}
+.chat-input{flex:1;background:var(--card);border:1px solid var(--border);border-radius:var(--r);color:var(--white);font-family:var(--mono);font-size:12px;padding:9px 12px;outline:none;resize:none;height:40px;transition:border-color .2s}
+.chat-input:focus{border-color:var(--accent2)}
+.chat-input::placeholder{color:var(--muted)}
+.btn-send{background:var(--accent2);border:none;color:#fff;border-radius:var(--r);padding:9px 14px;cursor:pointer;font-size:16px;transition:all .15s;flex-shrink:0}
+.btn-send:hover{opacity:.88}
+.btn-send:disabled{opacity:.3;cursor:not-allowed}
+
+/* ── Loading dots ── */
+.loader-dots{display:inline-flex;gap:4px;align-items:center}
+.loader-dots span{width:5px;height:5px;border-radius:50%;background:var(--muted);animation:ldot 1.2s ease-in-out infinite}
+.loader-dots span:nth-child(2){animation-delay:.2s}
+.loader-dots span:nth-child(3){animation-delay:.4s}
+@keyframes ldot{0%,80%,100%{transform:scale(.6);opacity:.3}40%{transform:scale(1);opacity:1}}
+
+/* ── Empty state ── */
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:3rem;text-align:center;gap:10px;color:var(--muted);font-size:13px}
+.empty-icon{font-size:32px;margin-bottom:4px}
+
+/* ── Misc ── */
+.hidden{display:none!important}
+.divider{height:1px;background:var(--border);margin:4px 0}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ══ TOPBAR ══ -->
+<div class="topbar">
+  <div class="logo">
+    <div class="logo-icon">🗄</div>
+    AlloyDB <span style="color:var(--accent)">·</span> NL Query
+  </div>
+  <div class="topbar-sep"></div>
+  <div class="status-label">
+    <span class="status-dot {% if db_enabled %}ok{% else %}err{% endif %}" id="dbDot"></span>
+    AlloyDB
+  </div>
+  <div class="status-label" style="margin-left:12px">
+    <span class="status-dot {% if ai_enabled %}ok{% else %}err{% endif %}" id="aiDot"></span>
+    Claude AI
+  </div>
+  <span class="topbar-badge" style="margin-left:16px">PostgreSQL · pgvector</span>
+  <span class="topbar-badge" style="margin-left:6px">claude-sonnet-4</span>
+</div>
+
+<!-- ══ SIDEBAR ══ -->
+<div class="sidebar">
+  <div class="nav-section">Navigation</div>
+
+  <div class="nav-item active" onclick="showPanel('query',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    NL Query
+  </div>
+  <div class="nav-item" onclick="showPanel('browse',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+    Browse Data
+  </div>
+  <div class="nav-item" onclick="showPanel('schema',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+    Schema & Docs
+  </div>
+
+  <div class="nav-divider"></div>
+  <div class="nav-section">Example Queries</div>
+
+  <div class="nav-item" onclick="loadExample('Top 5 highest rated products')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+    Top rated
+  </div>
+  <div class="nav-item" onclick="loadExample('Show electronics under $100')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+    Cheap electronics
+  </div>
+  <div class="nav-item" onclick="loadExample('Items with low stock below 20 units')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    Low stock alerts
+  </div>
+  <div class="nav-item" onclick="loadExample('Best kitchen product by rating')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/></svg>
+    Best kitchen
+  </div>
+  <div class="nav-item" onclick="loadExample('Products priced between $30 and $80')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+    Price range
+  </div>
+  <div class="nav-item" onclick="loadExample('Most expensive product in each category')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    Category max
+  </div>
+  <div class="nav-item" onclick="loadExample('Sports items sorted by price ascending')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/><line x1="6" y1="9" x2="6" y2="21"/></svg>
+    Sports sorted
+  </div>
+
+  <div class="sidebar-footer">
+    <div class="schema-mini">
+      <div style="color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px">Table: products</div>
+      <div class="schema-col"><span class="schema-col-name">id</span><span class="schema-col-type">SERIAL</span></div>
+      <div class="schema-col"><span class="schema-col-name">name</span><span class="schema-col-type">TEXT</span></div>
+      <div class="schema-col"><span class="schema-col-name">category</span><span class="schema-col-type">TEXT</span></div>
+      <div class="schema-col"><span class="schema-col-name">price</span><span class="schema-col-type">NUMERIC</span></div>
+      <div class="schema-col"><span class="schema-col-name">stock</span><span class="schema-col-type">INTEGER</span></div>
+      <div class="schema-col"><span class="schema-col-name">rating</span><span class="schema-col-type">NUMERIC</span></div>
+      <div class="schema-col"><span class="schema-col-name">description</span><span class="schema-col-type">TEXT</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MAIN ══ -->
+<div class="main">
+
+  <!-- ── QUERY PANEL ── -->
+  <div class="panel active" id="panel-query">
+    <div class="stats-row">
+      <div class="stat-card accent"><div class="stat-val" id="stat-products">—</div><div class="stat-lbl">Products</div></div>
+      <div class="stat-card green"><div class="stat-val" id="stat-avg">—</div><div class="stat-lbl">Avg Price</div></div>
+      <div class="stat-card amber"><div class="stat-val" id="stat-rating">—</div><div class="stat-lbl">Avg Rating</div></div>
+      <div class="stat-card purple"><div class="stat-val" id="stat-stock">—</div><div class="stat-lbl">Total Stock</div></div>
+    </div>
+
+    <div class="query-card">
+      <div class="card-label">Natural language query</div>
+      <div class="q-row">
+        <input id="qInput" class="q-input" type="text" placeholder="Ask anything… e.g. 'Show electronics under $100 with rating above 4.5'" autocomplete="off"/>
+        <button class="btn btn-run" id="runBtn" onclick="runQuery()">▶ Run</button>
+        <button class="btn btn-ghost" onclick="clearResults()">Clear</button>
+      </div>
+      <div class="chips" id="chips"></div>
+    </div>
+
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-step" id="p1"><span class="dot"></span>Generating SQL</div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-step" id="p2"><span class="dot"></span>Querying AlloyDB</div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-step" id="p3"><span class="dot"></span>AI Summary</div>
+    </div>
+
+    <div id="errBox" class="error-box hidden"></div>
+
+    <div id="sqlWrap" class="hidden">
+      <div class="block-label">Generated SQL</div>
+      <div class="sql-block" id="sqlText"></div>
+    </div>
+
+    <div id="sumWrap" class="hidden">
+      <div class="summary-box">
+        <div class="block-label">AI Summary</div>
+        <div id="sumText"></div>
+      </div>
+    </div>
+
+    <div id="resWrap" class="hidden">
+      <div class="results-hdr">
+        <span class="results-title">Query Results</span>
+        <span class="count-badge" id="cntBadge">0 rows</span>
+      </div>
+      <div class="tbl-wrap" style="margin-top:8px">
+        <table><thead id="qHead"></thead><tbody id="qBody"></tbody></table>
+      </div>
+    </div>
+
+    <div id="emptyQuery" class="empty-state">
+      <div class="empty-icon">🔍</div>
+      <div>Enter a question above to query the database</div>
+      <div style="font-size:12px">Try clicking one of the example chips or sidebar links</div>
+    </div>
+  </div>
+
+  <!-- ── BROWSE PANEL ── -->
+  <div class="panel" id="panel-browse">
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-size:15px;font-weight:500;color:var(--white)">All Products</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">Complete dataset seeded in AlloyDB</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <select id="catFilter" onchange="filterBrowse()" style="background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:var(--r);padding:6px 10px;font-family:var(--mono);font-size:12px;outline:none">
+          <option value="">All categories</option>
+          <option>Electronics</option><option>Kitchen</option>
+          <option>Sports</option><option>Furniture</option><option>Home</option>
+        </select>
+        <select id="sortBy" onchange="filterBrowse()" style="background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:var(--r);padding:6px 10px;font-family:var(--mono);font-size:12px;outline:none">
+          <option value="id">Sort: Default</option>
+          <option value="price_asc">Price ↑</option>
+          <option value="price_desc">Price ↓</option>
+          <option value="rating">Rating ↓</option>
+          <option value="stock">Stock ↑</option>
+        </select>
+      </div>
+    </div>
+    <div id="browseGrid" class="browse-grid"></div>
+  </div>
+
+  <!-- ── SCHEMA PANEL ── -->
+  <div class="panel" id="panel-schema">
+    <div class="schema-panel">
+      <div class="schema-card">
+        <h3>Table schema — products</h3>
+        <table class="schema-table">
+          <thead><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td>id</td><td>SERIAL</td><td>Auto-increment primary key</td></tr>
+            <tr><td>name</td><td>TEXT</td><td>Product name (NOT NULL)</td></tr>
+            <tr><td>category</td><td>TEXT</td><td>Electronics · Kitchen · Sports · Furniture · Home</td></tr>
+            <tr><td>price</td><td>NUMERIC(10,2)</td><td>USD price, range $19.99–$329.00</td></tr>
+            <tr><td>stock</td><td>INTEGER</td><td>Units in stock, range 12–150</td></tr>
+            <tr><td>rating</td><td>NUMERIC(3,1)</td><td>Customer rating 0.0–5.0</td></tr>
+            <tr><td>description</td><td>TEXT</td><td>Short product description</td></tr>
+            <tr><td>created_at</td><td>TIMESTAMPTZ</td><td>Row creation timestamp (DEFAULT NOW())</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="schema-card">
+        <h3>Indexes</h3>
+        <div style="font-family:var(--mono);font-size:12px;color:#89b4d9;line-height:2">
+          idx_products_category ON products(category)<br>
+          idx_products_price    ON products(price)<br>
+          idx_products_rating   ON products(rating)<br>
+          pgvector extension    ENABLED (AlloyDB AI-ready)
+        </div>
+      </div>
+
+      <div class="arch-row">
+        <div class="arch-item">
+          <h4>AI Pipeline</h4>
+          <p style="font-size:12px;color:var(--text);line-height:1.8">
+            1. User types natural language question<br>
+            2. Claude generates a safe SELECT query<br>
+            3. SQL validated (SELECT-only guard)<br>
+            4. Executed on AlloyDB via psycopg2<br>
+            5. Claude summarises results in plain English
+          </p>
+        </div>
+        <div class="arch-item">
+          <h4>Technology Stack</h4>
+          <p style="font-size:12px;color:var(--text);line-height:1.8">
+            Frontend: HTML · CSS · Vanilla JS<br>
+            Backend: Python Flask REST API<br>
+            Database: AlloyDB for PostgreSQL<br>
+            AI: Anthropic Claude Sonnet 4<br>
+            Chatbot: Multi-turn conversation
+          </p>
+        </div>
+        <div class="arch-item">
+          <h4>API Endpoints</h4>
+          <p style="font-family:var(--mono);font-size:11px;color:var(--text);line-height:2">
+            GET  /api/health<br>
+            GET  /api/stats<br>
+            GET  /api/browse<br>
+            POST /api/query<br>
+            POST /api/execute<br>
+            POST /api/chat
+          </p>
+        </div>
+        <div class="arch-item">
+          <h4>AlloyDB Features</h4>
+          <p style="font-size:12px;color:var(--text);line-height:1.8">
+            Connection pooling (10 connections)<br>
+            pgvector extension enabled<br>
+            Indexed queries on category/price/rating<br>
+            Parameterised queries (SQL-injection safe)<br>
+            JSON-serialised results via psycopg2
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<!-- ══ CHAT PANEL ══ -->
+<div class="chat-panel">
+  <div class="chat-header">
+    <div class="chat-avatar">🤖</div>
+    <div class="chat-header-info">
+      <h3>DataBot</h3>
+      <p>AI assistant for this database</p>
+    </div>
+    <div class="status-dot ok" style="margin-left:auto" id="chatStatus"></div>
+  </div>
+
+  <div class="chat-msgs" id="chatMsgs">
+    <div class="msg msg-bot">
+      <div class="msg-bubble">
+        👋 Hi! I'm DataBot — your AI assistant for the AlloyDB product database.<br><br>
+        I can help you:<br>
+        • Answer questions about the data<br>
+        • Explain how to write queries<br>
+        • Suggest example questions<br>
+        • Explain the AlloyDB + AI architecture<br><br>
+        What would you like to know?
+      </div>
+      <div class="msg-time">now</div>
+    </div>
+  </div>
+
+  <div class="chat-suggestions" id="chatSugs">
+    <div class="chat-sug" onclick="sendSug(this)">What data is available?</div>
+    <div class="chat-sug" onclick="sendSug(this)">How does NL→SQL work?</div>
+    <div class="chat-sug" onclick="sendSug(this)">What is AlloyDB?</div>
+    <div class="chat-sug" onclick="sendSug(this)">Which products are best value?</div>
+  </div>
+
+  <div class="chat-input-row">
+    <textarea id="chatInput" class="chat-input" placeholder="Ask DataBot anything…" rows="1" onkeydown="chatKey(event)"></textarea>
+    <button class="btn-send" id="sendBtn" onclick="sendChat()">↑</button>
+  </div>
+</div>
+
+</div><!-- /app -->
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// State
+// ══════════════════════════════════════════════════════════════
+const $ = id => document.getElementById(id);
+let chatHistory = [];
+let allProducts = [];
+
+const EXAMPLES = [
+  "Top 5 highest rated products",
+  "Electronics under $100",
+  "Low stock items (under 20 units)",
+  "Best kitchen product by rating",
+  "Products between $30 and $80",
+  "Most expensive in each category",
+  "Sports items sorted by price",
+  "Products with rating above 4.7",
+  "All Furniture items",
+  "Cheapest home product",
+];
+
+// ══════════════════════════════════════════════════════════════
+// Init
+// ══════════════════════════════════════════════════════════════
+document.addEventListener("DOMContentLoaded", async () => {
+  buildChips();
+  await loadStats();
+  await loadBrowse();
+  $("qInput").addEventListener("keydown", e => { if(e.key==="Enter") runQuery(); });
+});
+
+// ══════════════════════════════════════════════════════════════
+// Navigation
+// ══════════════════════════════════════════════════════════════
+function showPanel(name, el) {
+  document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+  document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
+  $("panel-"+name).classList.add("active");
+  if(el) el.classList.add("active");
+}
+
+function loadExample(q) {
+  $("qInput").value = q;
+  showPanel("query", document.querySelector(".nav-item.active") || document.querySelectorAll(".nav-item")[0]);
+  document.querySelectorAll(".nav-item")[0].classList.add("active");
+  setTimeout(runQuery, 100);
+}
+
+// ══════════════════════════════════════════════════════════════
+// Stats
+// ══════════════════════════════════════════════════════════════
+async function loadStats() {
+  try {
+    const r = await fetch("/api/stats");
+    const d = await r.json();
+    $("stat-products").textContent = d.total_products ?? "—";
+    $("stat-avg").textContent = d.avg_price ? "$"+parseFloat(d.avg_price).toFixed(0) : "—";
+    $("stat-rating").textContent = d.avg_rating ? parseFloat(d.avg_rating).toFixed(1) : "—";
+    $("stat-stock").textContent = d.total_stock ?? "—";
+  } catch {}
+}
+
+// ══════════════════════════════════════════════════════════════
+// Browse
+// ══════════════════════════════════════════════════════════════
+async function loadBrowse() {
+  try {
+    const r = await fetch("/api/browse");
+    const d = await r.json();
+    allProducts = d.rows || [];
+    renderBrowse(allProducts);
+  } catch {
+    $("browseGrid").innerHTML = `<div class="empty-state"><div>Could not load data — is AlloyDB connected?</div></div>`;
+  }
+}
+
+function filterBrowse() {
+  const cat = $("catFilter").value;
+  const sort = $("sortBy").value;
+  let rows = cat ? allProducts.filter(r => r.category===cat) : [...allProducts];
+  if(sort==="price_asc")  rows.sort((a,b)=>a.price-b.price);
+  if(sort==="price_desc") rows.sort((a,b)=>b.price-a.price);
+  if(sort==="rating")     rows.sort((a,b)=>b.rating-a.rating);
+  if(sort==="stock")      rows.sort((a,b)=>a.stock-b.stock);
+  renderBrowse(rows);
+}
+
+function renderBrowse(rows) {
+  if(!rows.length) {
+    $("browseGrid").innerHTML = `<div class="empty-state"><div>No products found.</div></div>`;
+    return;
+  }
+  $("browseGrid").innerHTML = rows.map(p => `
+    <div class="product-card">
+      <div class="pc-top">
+        <div class="pc-name">${esc(p.name)}</div>
+        <div class="pc-cat">${esc(p.category)}</div>
+      </div>
+      <div class="pc-desc">${esc(p.description||"")}</div>
+      <div class="pc-meta">
+        <div class="pc-price">$${parseFloat(p.price).toFixed(2)}</div>
+        <div class="pc-rating">★ ${parseFloat(p.rating).toFixed(1)}</div>
+        <div class="pc-stock ${p.stock<20?'lo':''}">📦 ${p.stock}</div>
+      </div>
+    </div>
+  `).join("");
+}
+
+// ══════════════════════════════════════════════════════════════
+// Query pipeline
+// ══════════════════════════════════════════════════════════════
+function buildChips() {
+  $("chips").innerHTML = EXAMPLES.map(e =>
+    `<span class="chip" onclick="useChip('${e.replace(/'/g,"\\'")}'">${esc(e)}</span>`
+  ).join("");
+}
+
+function useChip(q) {
+  $("qInput").value = q;
+  $("qInput").focus();
+}
+
+function clearResults() {
+  ["errBox","sqlWrap","sumWrap","resWrap"].forEach(id => { $( id).classList.add("hidden"); });
+  $("pipeline").classList.remove("show");
+  $("emptyQuery").classList.remove("hidden");
+  $("qInput").value = "";
+}
+
+function setStep(id, state) {
+  const el=$(id);
+  el.className = "pipe-step" + (state?" "+state:"");
+}
+
+async function runQuery() {
+  const q = $("qInput").value.trim();
+  if(!q) return;
+
+  // Reset UI
+  ["errBox","sqlWrap","sumWrap","resWrap"].forEach(id => $( id).classList.add("hidden"));
+  $("emptyQuery").classList.add("hidden");
+  $("pipeline").classList.add("show");
+  ["p1","p2","p3"].forEach(s => setStep(s,""));
+  $("runBtn").disabled = true;
+
+  try {
+    // ── Step 1: NL → SQL ────────────────────────
+    setStep("p1","active");
+
+    const resp = await fetch("/api/query", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ question: q }),
+    });
+    const data = await resp.json();
+
+    if(data.error && !data.sql) {
+      setStep("p1","fail");
+      showErr(data.error);
+      return;
+    }
+
+    // Show SQL
+    if(data.sql) {
+      $("sqlText").innerHTML = highlightSQL(data.sql);
+      $("sqlWrap").classList.remove("hidden");
+    }
+    setStep("p1","done");
+
+    // ── Step 2: DB result ───────────────────────
+    setStep("p2","active");
+    if(data.error) {
+      setStep("p2","fail");
+      showErr("Database error: " + data.error);
+      return;
+    }
+    renderTable(data.columns, data.rows, data.count);
+    $("cntBadge").textContent = data.count + " row" + (data.count!==1?"s":"");
+    $("resWrap").classList.remove("hidden");
+    setStep("p2","done");
+
+    // ── Step 3: Summary ─────────────────────────
+    setStep("p3","active");
+    if(data.summary) {
+      $("sumText").textContent = data.summary;
+      $("sumWrap").classList.remove("hidden");
+    }
+    setStep("p3","done");
+
+  } catch(e) {
+    const active = ["p1","p2","p3"].find(s => $(s).classList.contains("active"));
+    if(active) setStep(active,"fail");
+    showErr("Network error: " + e.message);
+  } finally {
+    $("runBtn").disabled = false;
+  }
+}
+
+function showErr(msg) {
+  $("errBox").textContent = "⚠ " + msg;
+  $("errBox").classList.remove("hidden");
+}
+
+function renderTable(cols, rows, count) {
+  if(!rows||!rows.length) {
+    $("qHead").innerHTML = "";
+    $("qBody").innerHTML = `<tr><td colspan="99" style="text-align:center;padding:2rem;color:var(--muted)">No results found.</td></tr>`;
+    return;
+  }
+  $("qHead").innerHTML = "<tr>" + cols.map(c=>`<th>${esc(c)}</th>`).join("") + "</tr>";
+  $("qBody").innerHTML = rows.map(row =>
+    "<tr>" + cols.map(c => {
+      const v = row[c];
+      let cls = "";
+      if(c==="rating") cls=" class='td-rate'";
+      else if(c==="price") cls=" class='td-num'";
+      else if(c==="stock") cls=v<20?" class='td-lo'":" class='td-num'";
+      else if(c==="category") cls=" class='td-cat'";
+      const disp = (v===null||v===undefined) ? '<span style="color:var(--muted)">—</span>' : esc(String(v));
+      return `<td${cls} title="${esc(String(v??''))}">${disp}</td>`;
+    }).join("") + "</tr>"
+  ).join("");
+}
+
+function highlightSQL(sql) {
+  const kw = ["SELECT","FROM","WHERE","AND","OR","ORDER BY","GROUP BY","HAVING","LIMIT","JOIN","LEFT JOIN","INNER JOIN","ON","AS","DISTINCT","NOT IN","IN","BETWEEN","ILIKE","LIKE","IS NULL","IS NOT NULL"];
+  let out = esc(sql);
+  kw.forEach(k => {
+    out = out.replace(new RegExp("\\b"+k+"\\b","gi"), `<span class="kw">${k}</span>`);
+  });
+  out = out.replace(/\b(products)\b/gi, `<span class="tbl">$1</span>`);
+  out = out.replace(/'([^']*)'/g, `<span class="val">'$1'</span>`);
+  out = out.replace(/\b(\d+\.?\d*)\b/g, `<span class="val">$1</span>`);
+  return out;
+}
+
+// ══════════════════════════════════════════════════════════════
+// Chatbot
+// ══════════════════════════════════════════════════════════════
+function chatKey(e) {
+  if(e.key==="Enter" && !e.shiftKey) { e.preventDefault(); sendChat(); }
+}
+
+function sendSug(el) {
+  $("chatInput").value = el.textContent;
+  sendChat();
+  $("chatSugs").innerHTML = "";
+}
+
+function addMsg(role, text) {
+  const msgs = $("chatMsgs");
+  const now = new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});
+  const div = document.createElement("div");
+  div.className = "msg msg-"+role;
+  div.innerHTML = `
+    <div class="msg-bubble">${text.replace(/\n/g,"<br>")}</div>
+    <div class="msg-time">${now}</div>
+  `;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  return div;
+}
+
+function addTyping() {
+  const msgs = $("chatMsgs");
+  const div = document.createElement("div");
+  div.className = "msg msg-bot";
+  div.id = "typingMsg";
+  div.innerHTML = `<div class="msg-bubble typing"><div class="loader-dots"><span></span><span></span><span></span></div></div>`;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function removeTyping() {
+  const t = $("typingMsg");
+  if(t) t.remove();
+}
+
+async function sendChat() {
+  const input = $("chatInput");
+  const text = input.value.trim();
+  if(!text) return;
+
+  input.value = "";
+  $("sendBtn").disabled = true;
+
+  // Add user message to UI and history
+  addMsg("user", esc(text));
+  chatHistory.push({ role: "user", content: text });
+
+  addTyping();
+
+  try {
+    const resp = await fetch("/api/chat", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ messages: chatHistory }),
+    });
+    const data = await resp.json();
+    const reply = data.reply || "Sorry, I couldn't get a response.";
+
+    removeTyping();
+    addMsg("bot", esc(reply));
+    chatHistory.push({ role: "assistant", content: reply });
+
+    // Keep history manageable
+    if(chatHistory.length > 20) chatHistory = chatHistory.slice(-20);
+
+  } catch(e) {
+    removeTyping();
+    addMsg("bot", "Network error: " + esc(e.message));
+  } finally {
+    $("sendBtn").disabled = false;
+    input.focus();
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// Utils
+// ══════════════════════════════════════════════════════════════
+function esc(s) {
+  return String(s??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+</script>
+</body>
+</html>
