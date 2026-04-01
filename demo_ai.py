@@ -17,10 +17,12 @@ def nl_to_sql(question: str) -> dict:
     patterns = {
         "most expensive": "SELECT * FROM products ORDER BY price DESC LIMIT 1",
         "cheapest": "SELECT * FROM products ORDER BY price ASC LIMIT 1",
-        "highest rating": "SELECT * FROM products ORDER BY rating DESC LIMIT 1",
+        "highest rating": "SELECT * FROM products ORDER BY rating DESC LIMIT 5",
+        "top 5 highest rated": "SELECT * FROM products ORDER BY rating DESC LIMIT 5",
+        "top rated": "SELECT * FROM products ORDER BY rating DESC LIMIT 5",
         "lowest rating": "SELECT * FROM products ORDER BY rating ASC LIMIT 1",
         "electronics": "SELECT * FROM products WHERE category = 'Electronics' ORDER BY price",
-        "kitchen": "SELECT * FROM products WHERE category = 'Kitchen' ORDER BY price",
+        "kitchen": "SELECT * FROM products WHERE category = 'Kitchen' ORDER BY price", 
         "sports": "SELECT * FROM products WHERE category = 'Sports' ORDER BY price", 
         "furniture": "SELECT * FROM products WHERE category = 'Furniture' ORDER BY price",
         "home": "SELECT * FROM products WHERE category = 'Home' ORDER BY price",
@@ -64,6 +66,12 @@ def summarise(question: str, rows: list, count: int) -> str:
     if "cheapest" in question_lower:
         row = rows[0]
         return f"The cheapest product is {row['name']} at ${row['price']}."
+    
+    if "top 5 highest rated" in question_lower or "top rated" in question_lower:
+        if count == 5:
+            return f"Here are the top 5 highest rated products:\n1. {rows[0]['name']} - Rating: {rows[0]['rating']}\n2. {rows[1]['name']} - Rating: {rows[1]['rating']}\n3. {rows[2]['name']} - Rating: {rows[2]['rating']}\n4. {rows[3]['name']} - Rating: {rows[3]['rating']}\n5. {rows[4]['name']} - Rating: {rows[4]['rating']}"
+        else:
+            return f"Found {count} top-rated products, led by {rows[0]['name']} with a rating of {rows[0]['rating']}."
     
     if "highest rating" in question_lower:
         row = rows[0]

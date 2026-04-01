@@ -85,8 +85,9 @@ body{min-height:100%;background:var(--bg);color:var(--text);font-family:var(--ui
 .btn-ghost{background:transparent;color:var(--muted)}
 .btn-ghost:hover{background:var(--surface);color:var(--text)}
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
-.chip{background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:4px 12px;font-size:11px;font-family:var(--mono);color:var(--muted);cursor:pointer;transition:all .15s}
-.chip:hover{border-color:var(--accent);color:var(--accent);background:rgba(0,212,255,.06)}
+.chip{background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:4px 12px;font-size:11px;font-family:var(--mono);color:var(--muted);cursor:pointer;transition:all .15s;user-select:none}
+.chip:hover{border-color:var(--accent);color:var(--accent);background:rgba(0,212,255,.06);transform:translateY(-1px)}
+.chip:active{transform:scale(0.97)}
 
 /* ── Pipeline steps ── */
 .pipeline{display:none;align-items:center;gap:4px;flex-wrap:wrap;margin:4px 0}
@@ -220,7 +221,7 @@ td.td-cat{color:var(--accent2)}
     <span class="status-dot {% if ai_enabled %}ok{% else %}err{% endif %}" id="aiDot"></span>
     Claude AI
   </div>
-  <span class="topbar-badge" style="margin-left:16px">PostgreSQL · pgvector</span>
+  <span class="topbar-badge" style="margin-left:6px">PostgreSQL · pgvector</span>
   <span class="topbar-badge" style="margin-left:6px">claude-sonnet-4</span>
 </div>
 
@@ -605,7 +606,7 @@ function renderBrowse(rows) {
 // ══════════════════════════════════════════════════════════════
 function buildChips() {
   $("chips").innerHTML = EXAMPLES.map(e =>
-    `<span class="chip" onclick="useChip('${e.replace(/'/g,"\\'")}'">${esc(e)}</span>`
+    `<span class="chip" onclick="useChip('${e.replace(/'/g,"\\'")}')">${esc(e)}</span>`
   ).join("");
 }
 
