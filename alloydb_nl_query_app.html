@@ -339,6 +339,7 @@ function evalWhere(cond, row){
   });
   c=c.replace(/(\w+)\s*=\s*'([^']+)'/gi,(m,col,val)=>{
     const v=String(row[col.toLowerCase()]??"").toLowerCase();
+    
     return v===val.toLowerCase()?"true":"false";
   });
   c=c.replace(/\b(true|false)\b/g,"$1");

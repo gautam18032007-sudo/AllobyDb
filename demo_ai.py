@@ -22,8 +22,8 @@ def nl_to_sql(question: str) -> dict:
         "top rated": "SELECT * FROM products ORDER BY rating DESC LIMIT 5",
         "lowest rating": "SELECT * FROM products ORDER BY rating ASC LIMIT 1",
         "electronics": "SELECT * FROM products WHERE category = 'Electronics' ORDER BY price",
-        "kitchen": "SELECT * FROM products WHERE category = 'Kitchen' ORDER BY price", 
-        "sports": "SELECT * FROM products WHERE category = 'Sports' ORDER BY price", 
+        "kitchen": "SELECT * FROM products WHERE category = 'Kitchen' ORDER BY price",
+        "sports": "SELECT * FROM products WHERE category = 'Sports' ORDER BY price",
         "furniture": "SELECT * FROM products WHERE category = 'Furniture' ORDER BY price",
         "home": "SELECT * FROM products WHERE category = 'Home' ORDER BY price",
         "under $100": "SELECT * FROM products WHERE price < 100 ORDER BY price",
@@ -33,15 +33,44 @@ def nl_to_sql(question: str) -> dict:
         "how many": "SELECT COUNT(*) as total, category FROM products GROUP BY category",
         "total stock": "SELECT SUM(stock) as total_stock FROM products",
     }
-    
-    # Find matching pattern
+
+    # Check for simple patterns first
     for pattern, sql in patterns.items():
         if pattern in question_lower:
             return {"sql": sql, "error": None}
-    
+
+    # Check for price range (between $X and $Y)
+    import re
+    price_range = re.search(r'between\s+\$?(\d+)\s+and\s+\$?(\d+)', question_lower)
+    if price_range:
+        low, high = price_range.groups()
+        return {"sql": f"SELECT * FROM products WHERE price BETWEEN {low} AND {high} ORDER BY price", "error": None}
+
+    # Check for rating comparisons
+    rating_above = re.search(r'rating\s+(above|over|>|greater\s+than)\s+(\d+\.?\d*)', question_lower)
+    if rating_above:
+        rating = rating_above.group(2)
+        return {"sql": f"SELECT * FROM products WHERE rating > {rating} ORDER BY rating DESC", "error": None}
+
+    rating_below = re.search(r'rating\s+(below|under|<|less\s+than)\s+(\d+\.?\d*)', question_lower)
+    if rating_below:
+        rating = rating_below.group(2)
+        return {"sql": f"SELECT * FROM products WHERE rating < {rating} ORDER BY rating", "error": None}
+
+    # Check for price comparisons
+    price_above = re.search(r'price\s+(above|over|>|greater\s+than)\s+\$?(\d+)', question_lower)
+    if price_above:
+        price = price_above.group(2)
+        return {"sql": f"SELECT * FROM products WHERE price > {price} ORDER BY price", "error": None}
+
+    price_below = re.search(r'price\s+(below|under|<|less\s+than)\s+\$?(\d+)', question_lower)
+    if price_below:
+        price = price_below.group(2)
+        return {"sql": f"SELECT * FROM products WHERE price < {price} ORDER BY price", "error": None}
+
     # Default fallback
     return {
-        "sql": None, 
+        "sql": None,
         "error": "I can only answer questions about products, prices, categories, stock, and ratings. Try asking about 'most expensive', 'electronics under $100', or 'low stock items'."
     }
 
@@ -82,7 +111,22 @@ def summarise(question: str, rows: list, count: int) -> str:
     
     if "under $100" in question_lower or "under 100" in question_lower:
         return f"Found {count} products under $100, with prices ranging from ${rows[0]['price']} to ${rows[-1]['price']}."
-    
+
+    # Price range queries
+    if "between" in question_lower and ("$" in question_lower or any(str(i) in question_lower for i in range(10))):
+        if count > 0:
+            prices = [r['price'] for r in rows]
+            return f"Found {count} products in this price range, from ${min(prices):.2f} to ${max(prices):.2f}."
+        else:
+            return "No products found in this price range."
+
+    # Rating comparison queries
+    if "rating" in question_lower and any(op in question_lower for op in ["above", ">", "over", "greater"]):
+        if count > 0:
+            return f"Found {count} products with rating above the threshold, led by {rows[0]['name']} with {rows[0]['rating']} rating."
+        else:
+            return "No products found with rating above that threshold."
+
     if "low stock" in question_lower:
         items = ", ".join([f"{row['name']} ({row['stock']})" for row in rows[:3]])
         return f"Found {count} low stock items: {items}{'...' if count > 3 else ''}."
