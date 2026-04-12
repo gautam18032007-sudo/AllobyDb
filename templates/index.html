@@ -6,23 +6,32 @@
 <title>AlloyDB · AI Query Interface</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<!-- Google Sign-In -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 :root{
-  --bg:#07090d;--surface:#0c1017;--card:#101720;--border:#1c2a38;
-  --border2:#263545;--accent:#00d4ff;--accent2:#7c5cfc;--green:#00e5a0;
-  --warn:#ff6b6b;--amber:#ffb547;--text:#ccd8e8;--muted:#4e6070;
-  --dim:#2a3a4a;--white:#f0f6ff;
+  --bg:#050811;--surface:#0a0f1a;--card:#0d1320;--border:#1a2540;
+  --border2:#253555;--accent:#00d4ff;--accent2:#a855f7;--green:#22c55e;
+  --warn:#ef4444;--amber:#f59e0b;--text:#e2e8f0;--muted:#64748b;
+  --dim:#334155;--white:#f8fafc;
   --mono:'JetBrains Mono',monospace;--ui:'DM Sans',sans-serif;
-  --r:10px;--r2:14px;--r3:18px;
+  --r:12px;--r2:16px;--r3:20px;
+  --gradient-1:linear-gradient(135deg,#00d4ff 0%,#a855f7 50%,#ec4899 100%);
+  --gradient-2:linear-gradient(90deg,rgba(0,212,255,.1) 0%,rgba(168,85,247,.1) 100%);
+  --glow-accent:0 0 40px rgba(0,212,255,.3);
+  --glow-purple:0 0 40px rgba(168,85,247,.3);
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{height:100%;scroll-behavior:smooth}
-body{min-height:100%;background:var(--bg);color:var(--text);font-family:var(--ui);font-size:14px;line-height:1.6;display:flex;flex-direction:column}
+body{min-height:100%;background:var(--bg);color:var(--text);font-family:var(--ui);font-size:14px;line-height:1.6;display:flex;flex-direction:column;position:relative;overflow-x:hidden}
+body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(ellipse at 20% 20%,rgba(0,212,255,.08) 0%,transparent 50%),radial-gradient(ellipse at 80% 80%,rgba(168,85,247,.08) 0%,transparent 50%),radial-gradient(ellipse at 50% 50%,rgba(236,72,153,.05) 0%,transparent 60%);pointer-events:none;z-index:-1;animation:ambientMove 20s ease-in-out infinite}
+@keyframes ambientMove{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(-2%,-2%) scale(1.05)}}
 
 /* ── Scrollbar ── */
-::-webkit-scrollbar{width:4px;height:4px}
-::-webkit-scrollbar-track{background:var(--surface)}
-::-webkit-scrollbar-thumb{background:var(--dim);border-radius:2px}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:var(--surface);border-radius:3px}
+::-webkit-scrollbar-thumb{background:var(--gradient-1);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--accent)}
 
 /* ── Layout ── */
 .app{display:grid;grid-template-rows:56px 1fr;grid-template-columns:240px 1fr 340px;height:100vh;overflow:hidden}
@@ -30,7 +39,8 @@ body{min-height:100%;background:var(--bg);color:var(--text);font-family:var(--ui
 /* ── Topbar ── */
 .topbar{grid-column:1/-1;display:flex;align-items:center;padding:0 20px;gap:16px;background:var(--surface);border-bottom:1px solid var(--border);z-index:10}
 .logo{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:13px;font-weight:600;color:var(--white);letter-spacing:.02em}
-.logo-icon{width:28px;height:28px;background:linear-gradient(135deg,var(--accent2),var(--accent));border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.logo-icon{width:28px;height:28px;background:var(--gradient-1);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;box-shadow:0 0 20px rgba(0,212,255,.4);animation:pulse-glow 2s ease-in-out infinite}
+@keyframes pulse-glow{0%,100%{box-shadow:0 0 20px rgba(0,212,255,.4),0 0 40px rgba(168,85,247,.2)}50%{box-shadow:0 0 30px rgba(0,212,255,.6),0 0 60px rgba(168,85,247,.4)}}
 .topbar-sep{flex:1}
 .status-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
 .status-dot.ok{background:var(--green);box-shadow:0 0 6px var(--green)}
@@ -47,9 +57,62 @@ body{min-height:100%;background:var(--bg);color:var(--text);font-family:var(--ui
 .nav-item.active{color:var(--accent);background:rgba(0,212,255,.07);border-left-color:var(--accent)}
 .nav-item svg{width:15px;height:15px;flex-shrink:0;opacity:.7}
 .nav-item.active svg{opacity:1}
+.nav-item .query-label{flex:1}
+.nav-item .query-count{font-family:var(--mono);font-size:10px;background:rgba(168,85,247,.15);color:var(--accent2);padding:2px 6px;border-radius:999px;min-width:18px;text-align:center;margin-left:auto}
 .nav-divider{height:1px;background:var(--border);margin:8px 0}
-.sidebar-footer{margin-top:auto;padding:12px 16px;border-top:1px solid var(--border)}
+.sidebar-footer{margin-top:auto;padding:16px;border-top:1px solid var(--border);background:linear-gradient(180deg,transparent,rgba(0,212,255,.03))}
 .schema-mini{font-family:var(--mono);font-size:10px;color:var(--muted);line-height:1.8}
+
+/* ── Author Attribution ── */
+.author-attribution{margin-top:12px;padding-top:12px;border-top:1px dashed var(--border);font-family:var(--ui);font-size:11px;color:var(--muted);text-align:center;animation:float 3s ease-in-out infinite}
+.author-attribution .heart{color:var(--warn);display:inline-block;animation:pulse 1.2s ease-in-out infinite}
+.author-names{font-weight:600;color:var(--accent);background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+
+/* ── Floating Animations ── */
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes float-delayed{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+@keyframes glow{0%,100%{box-shadow:0 0 20px rgba(0,212,255,.3),0 0 40px rgba(168,85,247,.2)}50%{box-shadow:0 0 40px rgba(0,212,255,.5),0 0 60px rgba(168,85,247,.4)}}
+@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+@keyframes pulse-ring{0%{transform:scale(1);opacity:1}100%{transform:scale(1.5);opacity:0}}
+@keyframes morph{0%,100%{border-radius:60% 40% 30% 70%/60% 30% 70% 40%}50%{border-radius:30% 60% 70% 40%/50% 60% 30% 60%}}
+@keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+
+.floating{animation:float 3s ease-in-out infinite}
+.floating-delayed{animation:float-delayed 4s ease-in-out infinite;animation-delay:1s}
+.glowing{animation:glow 2s ease-in-out infinite}
+.slide-up{animation:slideUp 0.5s ease-out}
+.morphing{animation:morph 8s ease-in-out infinite}
+.tilt-3d{transform-style:preserve-3d;transition:transform .3s}
+.tilt-3d:hover{transform:perspective(1000px) rotateX(5deg) rotateY(-5deg) translateZ(10px)}
+.particle-bg{position:relative;overflow:hidden}
+.particle-bg::after{content:'';position:absolute;inset:0;background-image:radial-gradient(circle at 20% 50%,rgba(0,212,255,.1) 0%,transparent 2%),radial-gradient(circle at 80% 80%,rgba(168,85,247,.1) 0%,transparent 2%),radial-gradient(circle at 40% 20%,rgba(236,72,153,.1) 0%,transparent 2%);animation:particleFloat 15s ease-in-out infinite;pointer-events:none}
+
+/* ── Modern UI Elements ── */
+.glass-panel{background:rgba(13,19,32,.7);backdrop-filter:blur(24px) saturate(180%);border:1px solid rgba(0,212,255,.2);border-radius:var(--r2);box-shadow:0 8px 32px rgba(0,0,0,.4),var(--glow-accent);transition:all .4s cubic-bezier(0.4,0,0.2,1)}
+.glass-panel:hover{box-shadow:0 12px 40px rgba(0,0,0,.5),var(--glow-purple);border-color:rgba(168,85,247,.3);transform:translateY(-2px)}
+.shimmer-text{background:var(--gradient-1);background-size:200% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:shimmer 3s linear infinite}
+.mesh-gradient{background:linear-gradient(135deg,#0a0f1a 0%,#0d1320 25%,#1a2540 50%,#0d1320 75%,#0a0f1a 100%);background-size:400% 400%;animation:meshMove 8s ease infinite}
+@keyframes meshMove{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+.aurora-bg{position:relative;overflow:hidden}
+.aurora-bg::before{content:'';position:absolute;top:-100%;left:-100%;width:300%;height:300%;background:conic-gradient(from 0deg at 50% 50%,transparent 0deg,rgba(0,212,255,.1) 60deg,transparent 120deg,rgba(168,85,247,.1) 180deg,transparent 240deg,rgba(236,72,153,.1) 300deg,transparent 360deg);animation:auroraRotate 20s linear infinite;pointer-events:none}
+.neon-border{position:relative}
+.neon-border::before{content:'';position:absolute;inset:-2px;border-radius:inherit;padding:2px;background:var(--gradient-1);-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;opacity:0;transition:opacity .3s;pointer-events:none}
+.neon-border:hover::before{opacity:1}
+.ai-glow{position:relative;overflow:hidden}
+.ai-glow::after{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:var(--gradient-2);animation:rotate 10s linear infinite;opacity:.5;pointer-events:none}
+@keyframes rotate{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+
+/* ── Advanced 2025 Effects ── */
+.cursor-glow{position:fixed;width:40px;height:40px;border-radius:50%;background:radial-gradient(circle,rgba(0,212,255,.3) 0%,transparent 70%);pointer-events:none;z-index:9999;transform:translate(-50%,-50%);transition:transform .1s,opacity .3s;mix-blend-mode:screen}
+.magnetic{transition:transform .3s cubic-bezier(0.4,0,0.2,1)}
+.text-glitch{position:relative}
+.text-glitch::before,.text-glitch::after{content:attr(data-text);position:absolute;top:0;left:0;width:100%;height:100%;background:var(--bg)}
+.text-glitch::before{left:2px;text-shadow:-1px 0 var(--warn);clip:rect(24px,550px,90px,0);animation:glitch-anim-2 3s infinite linear alternate-reverse}
+.text-glitch::after{left:-2px;text-shadow:-1px 0 var(--accent);clip:rect(85px,550px,140px,0);animation:glitch-anim 2.5s infinite linear alternate-reverse}
+@keyframes glitch-anim{0%{clip:rect(14px,9999px,127px,0)}20%{clip:rect(88px,9999px,11px,0)}40%{clip:rect(45px,9999px,66px,0)}60%{clip:rect(99px,9999px,98px,0)}80%{clip:rect(34px,9999px,11px,0)}100%{clip:rect(121px,9999px,85px,0)}}
+@keyframes glitch-anim-2{0%{clip:rect(129px,9999px,36px,0)}20%{clip:rect(34px,9999px,9px,0)}40%{clip:rect(89px,9999px,127px,0)}60%{clip:rect(11px,9999px,78px,0)}80%{clip:rect(67px,9999px,56px,0)}100%{clip:rect(12px,9999px,123px,0)}}
+.neon-text{text-shadow:0 0 5px var(--accent),0 0 10px var(--accent),0 0 20px var(--accent),0 0 40px var(--accent2);animation:neon-flicker 2s infinite alternate}
+@keyframes neon-flicker{0%,100%{opacity:1}50%{opacity:.8}}
 .schema-col{display:flex;gap:8px}
 .schema-col-name{color:var(--dim);min-width:70px}
 .schema-col-type{color:var(--accent2);opacity:.7}
@@ -61,29 +124,37 @@ body{min-height:100%;background:var(--bg);color:var(--text);font-family:var(--ui
 @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 
 /* ── Stats bar ── */
-.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
-.stat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px}
-.stat-val{font-size:22px;font-weight:600;font-family:var(--mono);color:var(--white)}
-.stat-lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-top:2px}
-.stat-card.accent .stat-val{color:var(--accent)}
-.stat-card.green .stat-val{color:var(--green)}
-.stat-card.amber .stat-val{color:var(--amber)}
-.stat-card.purple .stat-val{color:var(--accent2)}
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;position:relative;overflow:hidden;transition:all .3s;transform-style:preserve-3d}
+.stat-card::before{content:'';position:absolute;top:0;left:0;width:100%;height:3px;background:var(--gradient-1);opacity:0;transition:opacity .3s}
+.stat-card::after{content:'';position:absolute;inset:0;background:radial-gradient(circle at var(--mouse-x,50%) var(--mouse-y,50%),rgba(0,212,255,.15) 0%,transparent 50%);opacity:0;transition:opacity .3s;pointer-events:none}
+.stat-card:hover{transform:perspective(1000px) rotateX(var(--rotate-x,0deg)) rotateY(var(--rotate-y,0deg)) translateZ(10px);border-color:var(--accent2);box-shadow:0 10px 30px rgba(0,0,0,.3),0 0 30px rgba(0,212,255,.1)}
+.stat-card:hover::before{opacity:1}
+.stat-card:hover::after{opacity:1}
+.stat-val{font-size:24px;font-weight:700;font-family:var(--mono);color:var(--white);text-shadow:0 0 20px rgba(255,255,255,.1);position:relative;z-index:1}
+.stat-lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-top:4px;font-weight:500;position:relative;z-index:1}
+.stat-card.accent .stat-val{color:var(--accent);text-shadow:0 0 20px rgba(0,212,255,.3)}
+.stat-card.green .stat-val{color:var(--green);text-shadow:0 0 20px rgba(34,197,94,.3)}
+.stat-card.amber .stat-val{color:var(--amber);text-shadow:0 0 20px rgba(245,158,11,.3)}
+.stat-card.purple .stat-val{color:var(--accent2);text-shadow:0 0 20px rgba(168,85,247,.3)}
 
 /* ── Query card ── */
-.query-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:18px}
-.card-label{font-family:var(--mono);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;margin-bottom:10px}
-.q-row{display:flex;gap:8px}
-.q-input{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);color:var(--white);font-family:var(--mono);font-size:13px;padding:10px 14px;outline:none;transition:border-color .2s,box-shadow .2s}
-.q-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,212,255,.1)}
-.q-input::placeholder{color:var(--muted)}
-.btn{border:1px solid var(--border2);border-radius:var(--r);font-family:var(--ui);font-size:13px;font-weight:500;padding:10px 18px;cursor:pointer;transition:all .15s;white-space:nowrap}
-.btn-run{background:linear-gradient(135deg,var(--accent2),var(--accent));border:none;color:#000;font-weight:600}
-.btn-run:hover{opacity:.88;transform:translateY(-1px)}
+.query-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:20px;position:relative;overflow:hidden}
+.query-card::after{content:'';position:absolute;top:-50%;right:-50%;width:100%;height:100%;background:radial-gradient(circle,rgba(168,85,247,.1) 0%,transparent 70%);pointer-events:none}
+.card-label{font-family:var(--mono);font-size:11px;color:var(--accent);text-transform:uppercase;letter-spacing:.15em;margin-bottom:12px;font-weight:600}
+.q-row{display:flex;gap:10px;position:relative;z-index:1}
+.q-input{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);color:var(--white);font-family:var(--mono);font-size:13px;padding:12px 16px;outline:none;transition:all .3s}
+.q-input:focus{border-color:var(--accent);box-shadow:0 0 0 4px rgba(0,212,255,.15),0 0 20px rgba(0,212,255,.2)}
+.q-input::placeholder{color:var(--muted);font-style:italic}
+.btn{border:1px solid var(--border2);border-radius:var(--r);font-family:var(--ui);font-size:13px;font-weight:500;padding:10px 18px;cursor:pointer;transition:all .2s cubic-bezier(0.4,0,0.2,1);white-space:nowrap;position:relative;overflow:hidden}
+.btn::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.2),transparent);transition:left .5s}
+.btn:hover::before{left:100%}
+.btn-run{background:var(--gradient-1);border:none;color:#fff;font-weight:600;box-shadow:0 4px 15px rgba(0,212,255,.3)}
+.btn-run:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(0,212,255,.4),0 0 20px rgba(168,85,247,.3)}
 .btn-run:active{transform:scale(.97)}
-.btn-run:disabled{opacity:.35;cursor:not-allowed;transform:none}
-.btn-ghost{background:transparent;color:var(--muted)}
-.btn-ghost:hover{background:var(--surface);color:var(--text)}
+.btn-run:disabled{opacity:.35;cursor:not-allowed;transform:none;box-shadow:none}
+.btn-ghost{background:transparent;color:var(--muted);border-color:var(--border)}
+.btn-ghost:hover{background:var(--surface);color:var(--accent);border-color:var(--accent);box-shadow:0 0 15px rgba(0,212,255,.2)}
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
 .chip{background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:6px 14px;font-size:12px;font-family:var(--mono);color:var(--muted);cursor:pointer;transition:all .2s cubic-bezier(0.4, 0, 0.2, 1);user-select:none;position:relative;overflow:hidden}
 .chip:hover{border-color:var(--accent);color:var(--accent);background:rgba(0,212,255,.08);transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,212,255,.15)}
@@ -134,11 +205,34 @@ td.td-num{color:var(--green)}
 td.td-rate{color:var(--amber)}
 td.td-lo{color:var(--warn)}
 td.td-cat{color:var(--accent2)}
+tbody tr{cursor:pointer}
+tbody tr:hover{background:rgba(0,212,255,.08)}
+
+/* ── Detail Modal ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);z-index:1000;display:flex;align-items:center;justify-content:center;opacity:0;visibility:hidden;transition:all .3s}
+.modal-overlay.show{opacity:1;visibility:visible}
+.modal-content{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);width:90%;max-width:500px;max-height:90vh;overflow-y:auto;box-shadow:0 25px 50px rgba(0,0,0,.5),0 0 50px rgba(168,85,247,.2)}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid var(--border)}
+.modal-title{font-size:18px;font-weight:600;color:var(--white);margin:0}
+.modal-close{background:none;border:none;color:var(--muted);font-size:24px;cursor:pointer;transition:color .2s}
+.modal-close:hover{color:var(--white)}
+.modal-body{padding:24px}
+.modal-row{display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid rgba(28,42,56,.5)}
+.modal-row:last-child{border-bottom:none}
+.modal-label{color:var(--muted);font-size:13px}
+.modal-value{color:var(--white);font-size:14px;font-weight:500}
+.modal-value.price{color:var(--green);font-size:18px;font-weight:600}
+.modal-value.rating{color:var(--amber)}
+.modal-value.stock{color:var(--green)}
+.modal-value.stock.low{color:var(--warn)}
+.modal-desc{background:rgba(0,212,255,.04);border:1px solid rgba(0,212,255,.1);border-radius:var(--r);padding:16px;margin-top:16px;color:var(--muted);font-size:13px;line-height:1.6}
 
 /* ── Browse grid ── */
-.browse-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
-.product-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:14px 16px;transition:border-color .2s}
-.product-card:hover{border-color:var(--border2)}
+.browse-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.product-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:16px 18px;transition:all .3s;position:relative;overflow:hidden}
+.product-card::before{content:'';position:absolute;top:0;left:0;width:100%;height:2px;background:var(--gradient-1);opacity:0;transition:opacity .3s}
+.product-card:hover{border-color:var(--accent2);transform:translateY(-4px);box-shadow:0 12px 30px rgba(0,0,0,.4),0 0 30px rgba(168,85,247,.2)}
+.product-card:hover::before{opacity:1}
 .pc-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px}
 .pc-name{font-size:13px;font-weight:500;color:var(--white);line-height:1.4}
 .pc-cat{font-family:var(--mono);font-size:10px;background:rgba(124,92,252,.12);border:1px solid rgba(124,92,252,.25);color:var(--accent2);padding:2px 8px;border-radius:999px;white-space:nowrap}
@@ -165,31 +259,32 @@ td.td-cat{color:var(--accent2)}
 .arch-item p{font-size:12px;color:var(--text);line-height:1.6}
 
 /* ── Chatbot panel ── */
-.chat-panel{background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;height:100%;overflow:hidden}
-.chat-header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0}
-.chat-avatar{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,var(--accent2),var(--accent));display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
-.chat-header-info h3{font-size:13px;font-weight:500;color:var(--white)}
-.chat-header-info p{font-size:11px;color:var(--muted)}
+.chat-panel{background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;height:100%;overflow:hidden;position:relative}
+.chat-panel::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:var(--gradient-1);opacity:.5}
+.chat-header{padding:16px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-shrink:0;background:var(--card)}
+.chat-avatar{width:36px;height:36px;border-radius:10px;background:var(--gradient-1);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;box-shadow:0 0 20px rgba(0,212,255,.3);animation:glow 2s ease-in-out infinite}
+.chat-header-info h3{font-size:14px;font-weight:600;color:var(--white);letter-spacing:.02em}
+.chat-header-info p{font-size:11px;color:var(--accent);font-weight:500}
 .chat-msgs{flex:1;overflow-y:auto;padding:14px 14px 0;display:flex;flex-direction:column;gap:10px}
 .msg{display:flex;flex-direction:column;gap:4px;animation:msgIn .2s ease}
 @keyframes msgIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
 .msg-user{align-items:flex-end}
 .msg-bot{align-items:flex-start}
-.msg-bubble{max-width:90%;padding:9px 13px;border-radius:12px;font-size:12px;line-height:1.65}
-.msg-user .msg-bubble{background:rgba(0,212,255,.12);border:1px solid rgba(0,212,255,.2);color:var(--accent);border-bottom-right-radius:3px}
-.msg-bot .msg-bubble{background:var(--card);border:1px solid var(--border);color:var(--text);border-bottom-left-radius:3px}
-.msg-bot .msg-bubble.typing{color:var(--muted)}
+.msg-bubble{max-width:90%;padding:12px 16px;border-radius:14px;font-size:13px;line-height:1.7;box-shadow:0 4px 15px rgba(0,0,0,.2)}
+.msg-user .msg-bubble{background:var(--gradient-1);border:none;color:#fff;border-bottom-right-radius:4px;font-weight:500;box-shadow:0 4px 20px rgba(0,212,255,.3)}
+.msg-bot .msg-bubble{background:var(--card);border:1px solid var(--border);color:var(--text);border-bottom-left-radius:4px}
+.msg-bot .msg-bubble.typing{color:var(--muted);background:var(--surface)}
 .msg-time{font-family:var(--mono);font-size:10px;color:var(--muted);padding:0 4px}
-.chat-suggestions{display:flex;flex-wrap:wrap;gap:5px;padding:10px 14px}
-.chat-sug{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:5px 10px;font-size:11px;font-family:var(--mono);color:var(--muted);cursor:pointer;transition:all .15s}
-.chat-sug:hover{border-color:var(--accent2);color:var(--accent2)}
+.chat-suggestions{display:flex;flex-wrap:wrap;gap:8px;padding:12px 16px}
+.chat-sug{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:6px 12px;font-size:11px;font-family:var(--mono);color:var(--muted);cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+.chat-sug:hover{border-color:var(--accent);color:var(--accent);background:rgba(0,212,255,.05);transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,212,255,.1)}
 .chat-input-row{padding:12px 14px;border-top:1px solid var(--border);display:flex;gap:8px;flex-shrink:0}
-.chat-input{flex:1;background:var(--card);border:1px solid var(--border);border-radius:var(--r);color:var(--white);font-family:var(--mono);font-size:12px;padding:9px 12px;outline:none;resize:none;height:40px;transition:border-color .2s}
-.chat-input:focus{border-color:var(--accent2)}
-.chat-input::placeholder{color:var(--muted)}
-.btn-send{background:var(--accent2);border:none;color:#fff;border-radius:var(--r);padding:9px 14px;cursor:pointer;font-size:16px;transition:all .15s;flex-shrink:0}
-.btn-send:hover{opacity:.88}
-.btn-send:disabled{opacity:.3;cursor:not-allowed}
+.chat-input{flex:1;background:var(--card);border:1px solid var(--border);border-radius:var(--r);color:var(--white);font-family:var(--mono);font-size:12px;padding:10px 14px;outline:none;resize:none;height:44px;transition:all .3s}
+.chat-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,212,255,.1),0 0 15px rgba(0,212,255,.1)}
+.chat-input::placeholder{color:var(--muted);font-style:italic}
+.btn-send{background:var(--gradient-1);border:none;color:#fff;border-radius:var(--r);padding:10px 16px;cursor:pointer;font-size:16px;transition:all .2s;flex-shrink:0;box-shadow:0 4px 15px rgba(0,212,255,.3)}
+.btn-send:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,212,255,.4),0 0 20px rgba(168,85,247,.3)}
+.btn-send:disabled{opacity:.3;cursor:not-allowed;box-shadow:none;transform:none}
 
 /* ── Loading dots ── */
 .loader-dots{display:inline-flex;gap:4px;align-items:center}
@@ -197,6 +292,60 @@ td.td-cat{color:var(--accent2)}
 .loader-dots span:nth-child(2){animation-delay:.2s}
 .loader-dots span:nth-child(3){animation-delay:.4s}
 @keyframes ldot{0%,80%,100%{transform:scale(.6);opacity:.3}40%{transform:scale(1);opacity:1}}
+
+/* ── Auth Modal ── */
+.auth-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(8px);z-index:1000;display:flex;align-items:center;justify-content:center;opacity:0;visibility:hidden;transition:all .3s}
+.auth-modal-overlay.active{opacity:1;visibility:visible}
+.auth-modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);width:400px;max-width:90%;padding:32px;position:relative;box-shadow:0 25px 50px rgba(0,0,0,.5),var(--glow-accent);transform:scale(.9);transition:transform .3s}
+.auth-modal-overlay.active .auth-modal{transform:scale(1)}
+.auth-modal-close{position:absolute;top:16px;right:16px;width:32px;height:32px;border-radius:50%;background:var(--card);border:1px solid var(--border);color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.auth-modal-close:hover{background:var(--warn);color:#fff;border-color:var(--warn)}
+.auth-modal h2{margin:0 0 24px;font-size:20px;font-weight:600;color:var(--white);text-align:center}
+.auth-tabs{display:flex;gap:8px;margin-bottom:24px;border-bottom:1px solid var(--border);padding-bottom:16px}
+.auth-tab{flex:1;padding:10px;border:none;background:transparent;color:var(--muted);font-family:var(--ui);font-size:14px;cursor:pointer;border-radius:var(--r);transition:all .2s;position:relative}
+.auth-tab.active{color:var(--accent);background:rgba(0,212,255,.1)}
+.auth-tab::after{content:'';position:absolute;bottom:-17px;left:0;right:0;height:2px;background:var(--gradient-1);opacity:0;transition:opacity .2s}
+.auth-tab.active::after{opacity:1}
+.auth-form{display:none;flex-direction:column;gap:16px}
+.auth-form.active{display:flex}
+.auth-input-group{display:flex;flex-direction:column;gap:6px}
+.auth-input-group label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.auth-input{background:var(--card);border:1px solid var(--border);border-radius:var(--r);color:var(--white);font-family:var(--ui);font-size:14px;padding:12px 16px;outline:none;transition:all .3s}
+.auth-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,212,255,.1)}
+.auth-input::placeholder{color:var(--dim)}
+.auth-btn{background:var(--gradient-1);border:none;color:#fff;font-family:var(--ui);font-size:15px;font-weight:600;padding:14px;cursor:pointer;border-radius:var(--r);transition:all .2s;box-shadow:0 4px 15px rgba(0,212,255,.3)}
+.auth-btn:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(0,212,255,.4)}
+.auth-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.auth-error{color:var(--warn);font-size:13px;padding:12px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);border-radius:var(--r);display:none}
+.auth-error.show{display:block}
+.auth-success{color:var(--green);font-size:13px;padding:12px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);border-radius:var(--r);display:none}
+.auth-success.show{display:block}
+.user-menu{display:flex;align-items:center;gap:12px;margin-left:auto}
+.user-avatar{width:32px;height:32px;border-radius:50%;background:var(--gradient-1);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#fff}
+.user-name{font-size:13px;color:var(--text);font-weight:500}
+.btn-logout{background:transparent;border:1px solid var(--border);color:var(--muted);padding:6px 12px;font-size:12px;border-radius:var(--r);cursor:pointer;transition:all .2s}
+.btn-logout:hover{color:var(--warn);border-color:var(--warn)}
+.btn-login{background:var(--gradient-1);border:none;color:#fff;padding:8px 16px;font-size:13px;font-weight:600;border-radius:var(--r);cursor:pointer;transition:all .2s;box-shadow:0 4px 15px rgba(0,212,255,.3)}
+.btn-login:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,212,255,.4)}
+
+/* ── Credit System ── */
+.credit-badge{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;padding:4px 12px;border-radius:999px;font-size:12px;font-weight:600;margin-left:10px;box-shadow:0 2px 8px rgba(0,212,255,.3)}
+.credit-packages{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:20px 0}
+.credit-package{background:var(--card);border:2px solid var(--border);border-radius:var(--r2);padding:16px;text-align:center;cursor:pointer;transition:all .3s;position:relative}
+.credit-package:hover{border-color:var(--accent);transform:translateY(-4px);box-shadow:0 8px 25px rgba(0,212,255,.2)}
+.credit-package.popular{border-color:var(--accent2);box-shadow:0 0 20px rgba(168,85,247,.3)}
+.credit-package.popular::before{content:'POPULAR';position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:var(--gradient-1);color:#fff;font-size:10px;font-weight:600;padding:4px 12px;border-radius:999px}
+.credit-amount{font-size:24px;font-weight:700;color:var(--accent);margin-bottom:4px}
+.credit-price{font-size:14px;color:var(--muted);margin-bottom:8px}
+.credit-price span{color:var(--white);font-weight:600;font-size:18px}
+.payment-methods{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.payment-method-btn{background:var(--card);border:2px solid var(--border);border-radius:var(--r);padding:16px;cursor:pointer;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:8px;font-size:14px;color:var(--text)}
+.payment-method-btn:hover{border-color:var(--accent);background:rgba(0,212,255,.05)}
+.payment-method-btn.active{border-color:var(--accent);background:rgba(0,212,255,.1)}
+.btn-buy-credits{background:linear-gradient(135deg,var(--green),#10b981);border:none;color:#fff;padding:6px 14px;font-size:12px;font-weight:600;border-radius:var(--r);cursor:pointer;transition:all .2s;margin-left:10px}
+.btn-buy-credits:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(34,197,94,.3)}
+.anonymous-warning{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:var(--r);padding:12px 16px;margin-bottom:16px;color:var(--amber);font-size:13px;display:flex;align-items:center;gap:10px}
+.anonymous-warning .warning-icon{font-size:16px}
 
 /* ── Empty state ── */
 .empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:3rem;text-align:center;gap:10px;color:var(--muted);font-size:13px}
@@ -212,9 +361,9 @@ td.td-cat{color:var(--accent2)}
 
 <!-- ══ TOPBAR ══ -->
 <div class="topbar">
-  <div class="logo">
-    <div class="logo-icon">🗄</div>
-    AlloyDB <span style="color:var(--accent)">·</span> NL Query
+  <div class="logo floating">
+    <div class="logo-icon glowing">🗄</div>
+    <span class="shimmer-text">AlloyDB</span> <span style="color:var(--accent)">·</span> NL Query
   </div>
   <div class="topbar-sep"></div>
   <div class="status-label">
@@ -227,6 +376,141 @@ td.td-cat{color:var(--accent2)}
   </div>
   <span class="topbar-badge" style="margin-left:6px">PostgreSQL · pgvector</span>
   <span class="topbar-badge" style="margin-left:6px">claude-sonnet-4</span>
+  
+  <!-- Anonymous Warning -->
+  <div id="anonymousWarning" class="anonymous-warning" style="display:none;margin-left:12px">
+    <span class="warning-icon">⚠️</span>
+    <span id="anonymousWarningText">2 free queries only - <a href="#" onclick="openAuthModal();return false;" style="color:var(--accent)">Sign in</a> for 200 credits</span>
+  </div>
+  
+  <!-- User Menu -->
+  <div class="user-menu" id="userMenu">
+    <button class="btn-login" id="loginBtn" onclick="openAuthModal()">🔐 Login with Google</button>
+    <div id="userInfo" style="display:none;align-items:center;gap:12px">
+      <div class="user-avatar" id="userAvatar">U</div>
+      <span class="user-name" id="userName">User</span>
+      <span class="credit-badge" id="creditBadge" style="cursor:pointer" onclick="openPaymentModal()">0 credits</span>
+      <button class="btn-buy-credits" onclick="openPaymentModal()">+</button>
+      <button class="btn-logout" onclick="logout()">Logout</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ AUTH MODAL ══ -->
+<div class="auth-modal-overlay" id="authModal">
+  <div class="auth-modal">
+    <button class="auth-modal-close" onclick="closeAuthModal()">✕</button>
+    <h2>🔐 Welcome</h2>
+    <p style="text-align:center;color:var(--muted);margin:0 0 20px;font-size:13px">Sign in to get 200 free credits!</p>
+    
+    <div class="auth-error" id="authError"></div>
+    <div class="auth-success" id="authSuccess"></div>
+    
+    <!-- Demo Login - Primary Option -->
+    <div style="padding:20px;background:linear-gradient(135deg,rgba(99,102,241,0.1),rgba(139,92,246,0.1));border-radius:var(--r);border:2px solid var(--accent)">
+      <p style="margin:0 0 16px;font-size:14px;color:var(--text);text-align:center;font-weight:600">🚀 Quick Start - No Sign Up Required</p>
+      <button class="auth-btn" onclick="demoLogin()" style="background:linear-gradient(135deg,var(--accent),#8b5cf6);font-size:16px;padding:14px">
+        👤 Continue with Demo Account
+      </button>
+      <p style="margin:12px 0 0;font-size:12px;color:var(--muted);text-align:center">Get 200 free credits instantly • No registration needed</p>
+    </div>
+    
+    <!-- Alternative Options -->
+    <div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--border)">
+      <p style="margin:0 0 12px;font-size:12px;color:var(--muted);text-align:center">Or continue with</p>
+      
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <button class="auth-btn" onclick="continueAsGuest()" style="background:transparent;border:1px solid var(--border);color:var(--text)">
+          👤 Guest Mode (2 free queries)
+        </button>
+        <button class="auth-btn" onclick="openPaymentModal();closeAuthModal();" style="background:linear-gradient(135deg,var(--green),#10b981)">
+          💳 Buy Credits Without Login
+        </button>
+      </div>
+    </div>
+    
+    <!-- Google Sign-In (Hidden by default - requires setup) -->
+    <div id="googleSignInSection" style="display:none;margin-top:20px;padding-top:20px;border-top:1px solid var(--border)">
+      <p style="margin:0 0 12px;font-size:12px;color:var(--muted);text-align:center">Google Sign-In (Requires Setup)</p>
+      <div id="g_id_onload"
+           data-client_id="YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com"
+           data-context="signin"
+           data-ux_mode="popup"
+           data-callback="handleGoogleSignIn"
+           data-auto_prompt="false">
+      </div>
+      <div class="g_id_signin"
+           data-type="standard"
+           data-shape="rectangular"
+           data-theme="filled_blue"
+           data-text="signin_with"
+           data-size="large"
+           data-width="100%"
+           data-logo_alignment="left">
+      </div>
+    </div>
+    
+    <p style="text-align:center;color:var(--muted);margin-top:20px;font-size:12px">
+      By continuing, you agree to our Terms & Privacy Policy
+    </p>
+  </div>
+</div>
+
+<!-- ══ PAYMENT MODAL ══ -->
+<div class="auth-modal-overlay" id="paymentModal">
+  <div class="auth-modal" style="width:500px;max-width:95%">
+    <button class="auth-modal-close" onclick="closePaymentModal()">✕</button>
+    <h2>💳 Buy Credits</h2>
+    <p style="text-align:center;color:var(--muted);margin:0 0 20px;font-size:13px">
+      Current Balance: <span id="currentCredits" style="color:var(--accent);font-weight:600">0</span> credits
+    </p>
+    
+    <div class="credit-packages" id="creditPackages">
+      <!-- Packages loaded dynamically -->
+    </div>
+    
+    <div id="paymentForm" style="display:none;margin-top:20px">
+      <h3 style="font-size:14px;margin-bottom:15px">Payment Method</h3>
+      <div class="payment-methods">
+        <button class="payment-method-btn" onclick="selectPaymentMethod('upi')">
+          <span style="font-size:20px">📱</span> UPI
+        </button>
+        <button class="payment-method-btn" onclick="selectPaymentMethod('card')">
+          <span style="font-size:20px">💳</span> Card
+        </button>
+      </div>
+      
+      <div id="upiForm" style="display:none;margin-top:15px">
+        <div class="auth-input-group">
+          <label>UPI ID</label>
+          <input type="text" class="auth-input" id="upiId" placeholder="name@upi" />
+        </div>
+        <button class="auth-btn" onclick="processPayment('upi')" style="margin-top:15px">
+          Pay via UPI
+        </button>
+      </div>
+      
+      <div id="cardForm" style="display:none;margin-top:15px">
+        <div class="auth-input-group">
+          <label>Card Number</label>
+          <input type="text" class="auth-input" id="cardNumber" placeholder="1234 5678 9012 3456" maxlength="19"/>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+          <div class="auth-input-group">
+            <label>Expiry</label>
+            <input type="text" class="auth-input" id="cardExpiry" placeholder="MM/YY" maxlength="5"/>
+          </div>
+          <div class="auth-input-group">
+            <label>CVV</label>
+            <input type="password" class="auth-input" id="cardCvv" placeholder="123" maxlength="3"/>
+          </div>
+        </div>
+        <button class="auth-btn" onclick="processPayment('card')" style="margin-top:15px">
+          Pay via Card
+        </button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- ══ SIDEBAR ══ -->
@@ -277,17 +561,233 @@ td.td-cat{color:var(--accent2)}
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/><line x1="6" y1="9" x2="6" y2="21"/></svg>
     Sports sorted
   </div>
+  <div class="nav-item" onclick="loadExample('Show all furniture products')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+    All furniture
+  </div>
+  <div class="nav-item" onclick="loadExample('Products with rating above 4.7')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+    High rated 4.7+
+  </div>
+  <div class="nav-item" onclick="loadExample('Cheapest product overall')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+    Cheapest item
+  </div>
+  <div class="nav-item" onclick="loadExample('Total products in stock')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+    Total stock count
+  </div>
+  <div class="nav-item" onclick="loadExample('Products with high stock above 50 units')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+    High stock 50+
+  </div>
+  <div class="nav-item" onclick="loadExample('Average price of electronics')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+    Avg electronics
+  </div>
+  <div class="nav-item" onclick="loadExample('Home products under $50')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    <span class="query-label">Home under $50</span>
+    <span class="query-count" data-filter="price<50">45</span>
+  </div>
+  <div class="nav-item" onclick="loadExample('Products between $30 and $80')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+    <span class="query-label">$30 - $80 range</span>
+    <span class="query-count" data-filter="price30-80">38</span>
+  </div>
+  <div class="nav-item" onclick="loadExample('Kitchen products with high rating')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 16v-6m0-4v2"/></svg>
+    <span class="query-label">Kitchen top rated</span>
+    <span class="query-count" data-category="Kitchen">38</span>
+  </div>
+  <div class="nav-item" onclick="loadExample('How many products in each category')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h18v18H3zM9 3v18M15 3v18M3 9h18M3 15h18"/></svg>
+    <span class="query-label">Count by category</span>
+  </div>
+  <div class="nav-item" onclick="loadExample('Most expensive product overall')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>
+    <span class="query-label">Most expensive</span>
+  </div>
+  <div class="nav-item" onclick="loadExample('Electronics with price above $200')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 12h8M12 8v8"/></svg>
+    <span class="query-label">Electronics $200+</span>
+    <span class="query-count" data-filter="price>200">32</span>
+  </div>
+  <div class="nav-item" onclick="loadExample('All products sorted by name')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+    <span class="query-label">A-Z by name</span>
+    <span class="query-count">158</span>
+  </div>
+  <div class="nav-item" onclick="loadExample('Products with stock below 10')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    <span class="query-label">Critical stock &lt;10</span>
+    <span class="query-count" data-filter="stock<10">35</span>
+  </div>
+  <div class="nav-item" onclick="loadExample('Gaming products with rating above 4.5')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h2v4H6zm10 0h2v4h-2z"/></svg>
+    <span class="query-label">Gaming 4.5+</span>
+    <span class="query-count" data-category="Gaming">35</span>
+  </div>
+  <div class="nav-item" onclick="loadExample('Books with price under $25')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+    <span class="query-label">Books under $25</span>
+    <span class="query-count" data-category="Books">40</span>
+  </div>
+  <div class="nav-item" onclick="loadExample('Clothing items in stock')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.38 3.46L16 8l-2-4-4 4-2-4-4.38 3.46a2 2 0 0 0-.62 2.3l2.32 6.94a2 2 0 0 0 1.9 1.3h10a2 2 0 0 0 1.9-1.3l2.32-6.94a2 2 0 0 0-.62-2.3z"/></svg>
+    <span class="query-label">Clothing available</span>
+    <span class="query-count" data-category="Clothing">38</span>
+  </div>
+  <div class="nav-item" onclick="loadExample('Health products with rating above 4')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+    <span class="query-label">Health 4+</span>
+    <span class="query-count" data-category="Health">42</span>
+  </div>
+  <div class="nav-item" onclick="loadExample('Beauty products sorted by price descending')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+    <span class="query-label">Beauty high to low</span>
+    <span class="query-count" data-category="Beauty">40</span>
+  </div>
+  <div class="nav-item" onclick="loadExample('Outdoor products under $150')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 16v-6m0-4v2"/></svg>
+    <span class="query-label">Outdoor under $150</span>
+    <span class="query-count" data-category="Outdoor">38</span>
+  </div>
+  <div class="nav-item" onclick="loadExample('Office supplies with good stock')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+    <span class="query-label">Office supplies</span>
+    <span class="query-count" data-category="Office">42</span>
+  </div>
+  <div class="nav-item" onclick="loadExample('Pet products with price between $20 and $60')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5c-4 0-7 2-7 6s3 6 7 6 7-2 7-6-3-6-7-6zm-3 9v-4m6 4v-4"/></svg>
+    <span class="query-label">Pet $20-$60</span>
+    <span class="query-count" data-category="Pet">38</span>
+  </div>
+  <div class="nav-item" onclick="loadExample('Kids products with rating above 4')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="10" r="3"/><path d="M7 15a5 5 0 0 0 10 0"/></svg>
+    <span class="query-label">Kids 4+ rating</span>
+    <span class="query-count" data-category="Kids">40</span>
+  </div>
+  <div class="nav-item" onclick="loadExample('Audio products sorted by rating')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/><path d="M12 6v6l4 2"/></svg>
+    <span class="query-label">Audio by rating</span>
+    <span class="query-count" data-category="Audio">42</span>
+  </div>
+  <div class="nav-item" onclick="loadExample('Camera products with stock above 20')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="3"/><circle cx="17" cy="8" r="1.5"/></svg>
+    <span class="query-label">Camera stock 20+</span>
+    <span class="query-count" data-category="Camera">40</span>
+  </div>
+  <div class="nav-item" onclick="loadExample('Fitness products under $100')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6.5 6.5h11M6.5 17.5h11M6 12h12"/><circle cx="12" cy="12" r="9"/></svg>
+    <span class="query-label">Fitness under $100</span>
+    <span class="query-count" data-category="Fitness">40</span>
+  </div>
+  <div class="nav-item" onclick="loadExample('Jewelry with high rating')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l9 4.9V17L12 22l-9-4.9V7z"/></svg>
+    <span class="query-label">Jewelry top rated</span>
+    <span class="query-count" data-category="Jewelry">42</span>
+  </div>
+  <div class="nav-item" onclick="loadExample('Watches with price above $100')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+    <span class="query-label">Watches $100+</span>
+    <span class="query-count" data-category="Watches">40</span>
+  </div>
+  <div class="nav-item" onclick="loadExample('Shoes with good stock')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 16v-5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v5"/><path d="M4 16h16v4H4z"/></svg>
+    <span class="query-label">Shoes in stock</span>
+    <span class="query-count" data-category="Shoes">38</span>
+  </div>
+  <div class="nav-item" onclick="loadExample('Bags and luggage products')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="14" rx="2"/><path d="M3 10h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+    <span class="query-label">Bags & luggage</span>
+    <span class="query-count" data-category="Bags">40</span>
+  </div>
+  <div class="nav-item" onclick="loadExample('Tools and hardware under $80')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+    <span class="query-label">Tools under $80</span>
+    <span class="query-count" data-category="Tools">38</span>
+  </div>
+  <div class="nav-item" onclick="loadExample('Garden products with rating above 4.2')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 0 1 10 10c0 5.523-4.477 10-10 10S2 17.523 2 12 12 2zm0 0v20"/><path d="M12 2a10 10 0 0 0-10 10c0 5.523 4.477 10 10 10V2z"/></svg>
+    <span class="query-label">Garden 4.2+</span>
+    <span class="query-count" data-category="Garden">38</span>
+  </div>
+  <div class="nav-item" onclick="loadExample('Automotive products in stock')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><path d="M4 12h4m8 0h4"/></svg>
+    <span class="query-label">Automotive available</span>
+    <span class="query-count" data-category="Automotive">38</span>
+  </div>
+  <div class="nav-item" onclick="loadExample('Musical instruments sorted by price')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/><path d="M10 12h4"/></svg>
+    <span class="query-label">Instruments by price</span>
+    <span class="query-count" data-category="Musical">40</span>
+  </div>
+  <div class="nav-item" onclick="loadExample('Art supplies under $40')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>
+    <span class="query-label">Art under $40</span>
+    <span class="query-count" data-category="Art">40</span>
+  </div>
+  <div class="nav-item" onclick="loadExample('Collectibles with high rating')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+    <span class="query-label">Collectibles 4+</span>
+    <span class="query-count" data-category="Collectibles">38</span>
+  </div>
+  <div class="nav-item" onclick="loadExample('Toys for kids under $30')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="9" cy="9" r="2"/><circle cx="15" cy="9" r="2"/><path d="M8 16c1.5 2 4.5 2 6 0"/></svg>
+    <span class="query-label">Toys under $30</span>
+    <span class="query-count" data-category="Toys">40</span>
+  </div>
+  <div class="nav-item" onclick="loadExample('Phone accessories under $50')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>
+    <span class="query-label">Phone accessories</span>
+    <span class="query-count" data-category="Phone">38</span>
+  </div>
+  <div class="nav-item" onclick="loadExample('Laptop bags and cases')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h12"/></svg>
+    <span class="query-label">Laptop bags</span>
+    <span class="query-count" data-category="Bags">40</span>
+  </div>
+  <div class="nav-item" onclick="loadExample('Desk lamps and lighting')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18h6M10 22h4M8 14l4-10 4 10"/></svg>
+    <span class="query-label">Desk lamps</span>
+    <span class="query-count" data-category="Home">45</span>
+  </div>
+  <div class="nav-item" onclick="loadExample('Wireless speakers')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><circle cx="12" cy="12" r="4"/><path d="M12 8v8M16 12H8"/></svg>
+    <span class="query-label">Wireless speakers</span>
+    <span class="query-count" data-category="Audio">42</span>
+  </div>
+  <div class="nav-item" onclick="loadExample('Coffee makers and accessories')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8h1a4 4 0 0 1 0 8h-1M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8zM6 1v3M10 1v3M14 1v3"/></svg>
+    <span class="query-label">Coffee makers</span>
+    <span class="query-count" data-category="Kitchen">38</span>
+  </div>
+  <div class="nav-item" onclick="loadExample('Running shoes and gear')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 16v-5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v5"/><path d="M4 16h16v4H4z"/></svg>
+    <span class="query-label">Running gear</span>
+    <span class="query-count" data-category="Sports">40</span>
+  </div>
+  <div class="nav-item" onclick="loadExample('Camping equipment')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 20h18M5 20v-8l7-8 7 8v8"/></svg>
+    <span class="query-label">Camping gear</span>
+    <span class="query-count" data-category="Outdoor">38</span>
+  </div>
+
+  <!-- Recent Queries Section (shown only when logged in) -->
+  <div class="nav-divider" id="recentQueriesDivider" style="display:none"></div>
+  <div class="nav-section" id="recentQueriesSection" style="display:none">Recent Queries</div>
+  <div id="recentQueriesList" style="display:none">
+    <!-- Populated dynamically -->
+  </div>
 
   <div class="sidebar-footer">
     <div class="schema-mini">
       <div style="color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px">Table: products</div>
       <div class="schema-col"><span class="schema-col-name">id</span><span class="schema-col-type">SERIAL</span></div>
-      <div class="schema-col"><span class="schema-col-name">name</span><span class="schema-col-type">TEXT</span></div>
-      <div class="schema-col"><span class="schema-col-name">category</span><span class="schema-col-type">TEXT</span></div>
-      <div class="schema-col"><span class="schema-col-name">price</span><span class="schema-col-type">NUMERIC</span></div>
-      <div class="schema-col"><span class="schema-col-name">stock</span><span class="schema-col-type">INTEGER</span></div>
-      <div class="schema-col"><span class="schema-col-name">rating</span><span class="schema-col-type">NUMERIC</span></div>
-      <div class="schema-col"><span class="schema-col-name">description</span><span class="schema-col-type">TEXT</span></div>
+    </div>
+    <div class="author-attribution">
+      <span class="heart">❤️</span> Authored by <span class="author-names">Gautam Sharma</span>
     </div>
   </div>
 </div>
@@ -304,14 +804,18 @@ td.td-cat{color:var(--accent2)}
       <div class="stat-card purple"><div class="stat-val" id="stat-stock">—</div><div class="stat-lbl">Total Stock</div></div>
     </div>
 
-    <div class="query-card">
-      <div class="card-label">Natural language query</div>
+    <div class="query-card glass-panel neon-border">
+      <div class="card-label shimmer-text">Natural language query</div>
       <div class="q-row">
         <input id="qInput" class="q-input" type="text" placeholder="Ask anything… e.g. 'Show electronics under $100 with rating above 4.5'" autocomplete="off"/>
         <button class="btn btn-run" id="runBtn" onclick="runQuery()">▶ Run</button>
         <button class="btn btn-ghost" onclick="clearResults()">Clear</button>
       </div>
       <div class="chips" id="chips"></div>
+      <div id="queryCost" style="margin-top:10px;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:8px">
+        <span>💳 Each query costs <strong style="color:var(--accent)">1 credit</strong></span>
+        <span id="userQueryStatus" style="margin-left:auto"></span>
+      </div>
     </div>
 
     <div class="pipeline" id="pipeline">
@@ -631,9 +1135,17 @@ function setStep(id, state) {
   el.className = "pipe-step" + (state?" "+state:"");
 }
 
-async function runQuery() {
+window.runQuery = async function() {
   const q = $("qInput").value.trim();
-  if(!q) return;
+  if(!q) {
+    showErr("Please enter a question first");
+    return;
+  }
+
+  // Check credits/anonymous quota
+  if (!canMakeQuery()) {
+    return;
+  }
 
   // Reset UI
   ["errBox","sqlWrap","sumWrap","resWrap"].forEach(id => $( id).classList.add("hidden"));
@@ -646,7 +1158,7 @@ async function runQuery() {
     // ── Step 1: NL → SQL ────────────────────────
     setStep("p1","active");
 
-    const resp = await fetch("/api/query", {
+    const resp = await fetch("/api/ask", {
       method: "POST",
       headers: {"Content-Type":"application/json"},
       body: JSON.stringify({ question: q }),
@@ -666,6 +1178,9 @@ async function runQuery() {
     }
     setStep("p1","done");
 
+    // Record credit usage
+    recordQueryUsage();
+
     // ── Step 2: DB result ───────────────────────
     setStep("p2","active");
     if(data.error) {
@@ -673,18 +1188,25 @@ async function runQuery() {
       showErr("Database error: " + data.error);
       return;
     }
-    renderTable(data.columns, data.rows, data.count);
-    $("cntBadge").textContent = data.count + " row" + (data.count!==1?"s":"");
+    const rows = data.data || [];
+    const count = data.count || rows.length;
+    renderTable(rows);
+    $("cntBadge").textContent = count + " row" + (count!==1?"s":"");
     $("resWrap").classList.remove("hidden");
     setStep("p2","done");
 
     // ── Step 3: Summary ─────────────────────────
     setStep("p3","active");
-    if(data.summary) {
-      $("sumText").textContent = data.summary;
+    if(data.answer) {
+      $("sumText").textContent = data.answer;
       $("sumWrap").classList.remove("hidden");
     }
     setStep("p3","done");
+
+    // Record query to history for logged-in users
+    if (currentUser && authToken) {
+      recordQueryToHistory(q, data.sql, true);
+    }
 
   } catch(e) {
     const active = ["p1","p2","p3"].find(s => $(s).classList.contains("active"));
@@ -695,20 +1217,38 @@ async function runQuery() {
   }
 }
 
+async function recordQueryToHistory(query, sql, success) {
+  if (!authToken) return;
+  
+  try {
+    // The backend records queries automatically via the /api/ask endpoint
+    // But we refresh the recent queries list
+    await loadRecentQueries();
+  } catch (e) {
+    console.error('Failed to refresh recent queries:', e);
+  }
+}
+
 function showErr(msg) {
   $("errBox").textContent = "⚠ " + msg;
   $("errBox").classList.remove("hidden");
 }
 
-function renderTable(cols, rows, count) {
+// Store current results for detail view
+let currentResults = [];
+
+function renderTable(rows) {
   if(!rows||!rows.length) {
     $("qHead").innerHTML = "";
     $("qBody").innerHTML = `<tr><td colspan="99" style="text-align:center;padding:2rem;color:var(--muted)">No results found.</td></tr>`;
+    currentResults = [];
     return;
   }
+  currentResults = rows;
+  const cols = Object.keys(rows[0]);
   $("qHead").innerHTML = "<tr>" + cols.map(c=>`<th>${esc(c)}</th>`).join("") + "</tr>";
-  $("qBody").innerHTML = rows.map(row =>
-    "<tr>" + cols.map(c => {
+  $("qBody").innerHTML = rows.map((row, idx) =>
+    `<tr onclick="showDetailModal(${idx})">` + cols.map(c => {
       const v = row[c];
       let cls = "";
       if(c==="rating") cls=" class='td-rate'";
@@ -720,6 +1260,60 @@ function renderTable(cols, rows, count) {
     }).join("") + "</tr>"
   ).join("");
 }
+
+function showDetailModal(idx) {
+  const row = currentResults[idx];
+  if(!row) return;
+  
+  const title = row.name || row.product_name || row.title || `Product #${idx + 1}`;
+  $("modalTitle").textContent = title;
+  
+  let html = '';
+  const cols = Object.keys(row);
+  
+  cols.forEach(col => {
+    const val = row[col];
+    let valueClass = 'modal-value';
+    if(col === 'price') valueClass += ' price';
+    else if(col === 'rating') valueClass += ' rating';
+    else if(col === 'stock') valueClass += val < 20 ? ' stock low' : ' stock';
+    
+    const displayVal = (val === null || val === undefined) ? '—' : esc(String(val));
+    
+    html += `
+      <div class="modal-row">
+        <span class="modal-label">${esc(col)}</span>
+        <span class="${valueClass}">${displayVal}</span>
+      </div>
+    `;
+  });
+  
+  // Add description if available
+  if(row.description) {
+    html += `
+      <div class="modal-desc">
+        <strong>Description:</strong><br>
+        ${esc(row.description)}
+      </div>
+    `;
+  }
+  
+  $("modalBody").innerHTML = html;
+  $("detailModal").classList.add("show");
+}
+
+function closeDetailModal(e) {
+  if(!e || e.target.id === 'detailModal' || e.target.classList.contains('modal-close')) {
+    $("detailModal").classList.remove("show");
+  }
+}
+
+// Close modal with Escape key
+document.addEventListener('keydown', function(e) {
+  if(e.key === 'Escape') {
+    $("detailModal").classList.remove("show");
+  }
+});
 
 function highlightSQL(sql) {
   const kw = ["SELECT","FROM","WHERE","AND","OR","ORDER BY","GROUP BY","HAVING","LIMIT","JOIN","LEFT JOIN","INNER JOIN","ON","AS","DISTINCT","NOT IN","IN","BETWEEN","ILIKE","LIKE","IS NULL","IS NOT NULL"];
@@ -815,11 +1409,539 @@ async function sendChat() {
 }
 
 // ══════════════════════════════════════════════════════════════
+// 3D Tilt Effect for Cards
+// ══════════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', function() {
+  const cards = document.querySelectorAll('.stat-card');
+  cards.forEach(card => {
+    card.addEventListener('mousemove', function(e) {
+      const rect = card.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      const centerX = rect.width / 2;
+      const centerY = rect.height / 2;
+      const rotateX = ((y - centerY) / centerY) * -10;
+      const rotateY = ((x - centerX) / centerX) * 10;
+      card.style.setProperty('--rotate-x', rotateX + 'deg');
+      card.style.setProperty('--rotate-y', rotateY + 'deg');
+      card.style.setProperty('--mouse-x', (x / rect.width * 100) + '%');
+      card.style.setProperty('--mouse-y', (y / rect.height * 100) + '%');
+    });
+    card.addEventListener('mouseleave', function() {
+      card.style.setProperty('--rotate-x', '0deg');
+      card.style.setProperty('--rotate-y', '0deg');
+    });
+  });
+
+  // Cursor Glow Effect
+  const cursorGlow = document.createElement('div');
+  cursorGlow.className = 'cursor-glow';
+  document.body.appendChild(cursorGlow);
+  
+  document.addEventListener('mousemove', function(e) {
+    cursorGlow.style.left = e.clientX + 'px';
+    cursorGlow.style.top = e.clientY + 'px';
+  });
+  
+  document.addEventListener('mouseenter', function() {
+    cursorGlow.style.opacity = '1';
+  });
+  
+  document.addEventListener('mouseleave', function() {
+    cursorGlow.style.opacity = '0';
+  });
+
+  // Magnetic Buttons
+  const magneticElements = document.querySelectorAll('.btn, .chip, .nav-item');
+  magneticElements.forEach(el => {
+    el.addEventListener('mousemove', function(e) {
+      const rect = el.getBoundingClientRect();
+      const x = e.clientX - rect.left - rect.width / 2;
+      const y = e.clientY - rect.top - rect.height / 2;
+      el.style.transform = `translate(${x * 0.2}px, ${y * 0.2}px)`;
+    });
+    el.addEventListener('mouseleave', function() {
+      el.style.transform = '';
+    });
+  });
+});
+
+// ══════════════════════════════════════════════════════════════
+// Authentication & Credit System
+// ══════════════════════════════════════════════════════════════
+
+let currentUser = null;
+let userCredits = 0;
+let authToken = localStorage.getItem('authToken');
+let anonymousUses = parseInt(localStorage.getItem('anonymousUses') || '0');
+const MAX_ANONYMOUS_USES = 2;
+
+// Check if user is already logged in on page load
+document.addEventListener('DOMContentLoaded', function() {
+  if (authToken) {
+    fetchUserProfile();
+  }
+  updateAnonymousWarning();
+});
+
+function openAuthModal() {
+  document.getElementById('authModal').classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeAuthModal() {
+  document.getElementById('authModal').classList.remove('active');
+  document.body.style.overflow = '';
+  clearAuthMessages();
+}
+
+function clearAuthMessages() {
+  document.getElementById('authError').textContent = '';
+  document.getElementById('authError').classList.remove('show');
+  document.getElementById('authSuccess').textContent = '';
+  document.getElementById('authSuccess').classList.remove('show');
+}
+
+function showAuthError(message) {
+  const errorEl = document.getElementById('authError');
+  errorEl.textContent = message;
+  errorEl.classList.add('show');
+}
+
+function showAuthSuccess(message) {
+  const successEl = document.getElementById('authSuccess');
+  successEl.textContent = message;
+  successEl.classList.add('show');
+}
+
+// Google Sign-In Handler
+async function handleGoogleSignIn(response) {
+  clearAuthMessages();
+  
+  try {
+    const res = await fetch('/api/auth/google', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id_token: response.credential })
+    });
+    
+    const data = await res.json();
+    
+    if (res.ok) {
+      authToken = data.token;
+      currentUser = data.user;
+      userCredits = data.credits || 200;
+      localStorage.setItem('authToken', authToken);
+      updateUIForLoggedInUser();
+      showAuthSuccess(`Welcome ${data.user.name}! You have ${userCredits} free credits.`);
+      setTimeout(closeAuthModal, 2000);
+    } else {
+      showAuthError(data.error || 'Google sign-in failed');
+    }
+  } catch (e) {
+    showAuthError('Network error. Please try again.');
+  }
+}
+
+// Demo Login Handler (No Google Required)
+async function demoLogin() {
+  clearAuthMessages();
+  
+  // Create a demo user without Google
+  const demoUser = {
+    id: 'demo_' + Date.now(),
+    email: 'demo@alloydb.local',
+    name: 'Demo User',
+    picture: ''
+  };
+  
+  // Generate a simple token
+  authToken = 'demo_token_' + Math.random().toString(36).substring(2);
+  currentUser = demoUser;
+  userCredits = 200;
+  
+  localStorage.setItem('authToken', authToken);
+  localStorage.setItem('demoUser', JSON.stringify(demoUser));
+  
+  updateUIForLoggedInUser();
+  showAuthSuccess(`Welcome Demo User! You have 200 free credits.`);
+  setTimeout(closeAuthModal, 2000);
+}
+
+async function fetchUserProfile() {
+  try {
+    const res = await fetch('/api/auth/me', {
+      headers: { 'Authorization': 'Bearer ' + authToken }
+    });
+    
+    if (res.ok) {
+      const data = await res.json();
+      currentUser = data.user;
+      userCredits = data.credits || 0;
+      updateUIForLoggedInUser();
+    } else {
+      logout();
+    }
+  } catch (e) {
+    console.error('Failed to fetch user profile:', e);
+  }
+}
+
+function updateUIForLoggedInUser() {
+  if (!currentUser) return;
+  
+  document.getElementById('loginBtn').style.display = 'none';
+  document.getElementById('userInfo').style.display = 'flex';
+  document.getElementById('userName').textContent = currentUser.name || currentUser.email;
+  document.getElementById('userAvatar').textContent = (currentUser.name || currentUser.email)[0].toUpperCase();
+  
+  // Add credits badge
+  const creditBadge = document.createElement('span');
+  creditBadge.className = 'credit-badge';
+  creditBadge.id = 'creditBadge';
+  creditBadge.textContent = userCredits + ' credits';
+  creditBadge.onclick = openPaymentModal;
+  creditBadge.style.cursor = 'pointer';
+  
+  const existingBadge = document.getElementById('creditBadge');
+  if (existingBadge) {
+    existingBadge.textContent = userCredits + ' credits';
+  } else {
+    document.getElementById('userInfo').appendChild(creditBadge);
+  }
+  
+  // Show recent queries section
+  document.getElementById('recentQueriesDivider').style.display = 'block';
+  document.getElementById('recentQueriesSection').style.display = 'block';
+  document.getElementById('recentQueriesList').style.display = 'block';
+  
+  // Load recent queries
+  loadRecentQueries();
+}
+
+function logout() {
+  authToken = null;
+  currentUser = null;
+  userCredits = 0;
+  localStorage.removeItem('authToken');
+  
+  document.getElementById('loginBtn').style.display = 'block';
+  document.getElementById('userInfo').style.display = 'none';
+  document.getElementById('userName').textContent = 'User';
+  document.getElementById('userAvatar').textContent = 'U';
+  
+  const badge = document.getElementById('creditBadge');
+  if (badge) badge.remove();
+  
+  // Hide recent queries section
+  document.getElementById('recentQueriesDivider').style.display = 'none';
+  document.getElementById('recentQueriesSection').style.display = 'none';
+  document.getElementById('recentQueriesList').style.display = 'none';
+}
+
+async function loadRecentQueries() {
+  if (!authToken) return;
+  
+  try {
+    const res = await fetch('/api/user/history?limit=5', {
+      headers: { 'Authorization': 'Bearer ' + authToken }
+    });
+    
+    if (res.ok) {
+      const data = await res.json();
+      const container = document.getElementById('recentQueriesList');
+      
+      if (data.history && data.history.length > 0) {
+        container.innerHTML = data.history.map(q => `
+          <div class="nav-item" onclick="loadExample('${esc(q.query)}')" style="font-size:12px;padding:8px 12px">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;opacity:.6">
+              <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+            </svg>
+            <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(q.query)}</span>
+          </div>
+        `).join('');
+      } else {
+        container.innerHTML = '<div style="padding:12px;color:var(--muted);font-size:12px;text-align:center">No recent queries</div>';
+      }
+    }
+  } catch (e) {
+    console.error('Failed to load recent queries:', e);
+  }
+}
+
+function updateAnonymousWarning() {
+  const warningEl = document.getElementById('anonymousWarning');
+  const warningText = document.getElementById('anonymousWarningText');
+  const queryStatus = document.getElementById('userQueryStatus');
+  
+  if (!currentUser) {
+    warningEl.style.display = 'flex';
+    const remainingFree = Math.max(0, MAX_ANONYMOUS_USES - anonymousUses);
+    
+    // Check if user has bought anonymous credits
+    if (anonymousCredits > 0) {
+      warningText.innerHTML = `<strong>${anonymousCredits}</strong> credits available - <a href="#" onclick="openAuthModal();return false;" style="color:var(--accent);text-decoration:underline;">Sign in</a> to save history`;
+      if (queryStatus) {
+        queryStatus.innerHTML = `<span style="color:var(--green)">✓ ${anonymousCredits} credits available</span>`;
+      }
+    } else if (anonymousUses >= MAX_ANONYMOUS_USES) {
+      warningText.innerHTML = 'You have used all free queries. <a href="#" onclick="openPaymentModal();return false;" style="color:var(--accent);text-decoration:underline;">Buy credits</a> or <a href="#" onclick="openAuthModal();return false;" style="color:var(--accent);text-decoration:underline;">sign in</a> for 200 free credits!';
+      if (queryStatus) {
+        queryStatus.innerHTML = `<span style="color:var(--warn)">❌ No queries left</span>`;
+      }
+    } else {
+      warningText.innerHTML = `<strong>${remainingFree}</strong> free ${remainingFree === 1 ? 'query' : 'queries'} remaining - <a href="#" onclick="openAuthModal();return false;" style="color:var(--accent);text-decoration:underline;">Sign in</a> for 200 credits`;
+      if (queryStatus) {
+        queryStatus.innerHTML = `<span style="color:var(--amber)">⚠️ ${remainingFree} free ${remainingFree === 1 ? 'query' : 'queries'} left</span>`;
+      }
+    }
+  } else {
+    warningEl.style.display = 'none';
+    if (queryStatus) {
+      queryStatus.innerHTML = `<span style="color:var(--green)">✓ ${userCredits} credits available</span>`;
+    }
+  }
+}
+
+function canMakeQuery() {
+  if (currentUser) {
+    if (userCredits <= 0) {
+      showErr('You have no credits left. Please buy more credits to continue.');
+      openPaymentModal();
+      return false;
+    }
+    return true;
+  } else {
+    // Check if user has anonymous credits
+    if (anonymousCredits > 0) {
+      return true;
+    }
+    // Check free queries
+    if (anonymousUses >= MAX_ANONYMOUS_USES) {
+      showErr('You have used all free queries. Buy credits or sign in with Google to get 200 free credits!');
+      openPaymentModal();
+      return false;
+    }
+    return true;
+  }
+}
+
+function recordQueryUsage() {
+  if (!currentUser) {
+    // Use anonymous credits first, then count as free query
+    if (anonymousCredits > 0) {
+      anonymousCredits = Math.max(0, anonymousCredits - 1);
+      localStorage.setItem('anonymousCredits', anonymousCredits);
+      showAnonymousCredits();
+    } else {
+      anonymousUses++;
+      localStorage.setItem('anonymousUses', anonymousUses);
+    }
+    updateAnonymousWarning();
+  } else {
+    userCredits = Math.max(0, userCredits - 1);
+    updateUIForLoggedInUser();
+  }
+}
+
+// Close modal on overlay click
+document.getElementById('authModal').addEventListener('click', function(e) {
+  if (e.target === this) {
+    closeAuthModal();
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
+// Guest Mode & Anonymous Credits
+// ══════════════════════════════════════════════════════════════
+
+let anonymousCredits = parseInt(localStorage.getItem('anonymousCredits') || '0');
+
+function continueAsGuest() {
+  closeAuthModal();
+  showAuthSuccess('Continuing as guest...');
+  
+  // Update UI for guest mode
+  document.getElementById('loginBtn').textContent = '🔐 Login';
+  document.getElementById('loginBtn').onclick = openAuthModal;
+  
+  // Show anonymous warning
+  updateAnonymousWarning();
+  
+  // Show any anonymous credits they may have bought
+  if (anonymousCredits > 0) {
+    showAnonymousCredits();
+  }
+}
+
+function showAnonymousCredits() {
+  const menu = document.getElementById('userMenu');
+  let badge = document.getElementById('anonCreditBadge');
+  if (!badge) {
+    badge = document.createElement('span');
+    badge.id = 'anonCreditBadge';
+    badge.className = 'credit-badge';
+    badge.style.marginLeft = '10px';
+    badge.style.cursor = 'pointer';
+    badge.onclick = openPaymentModal;
+    menu.insertBefore(badge, document.getElementById('userInfo'));
+  }
+  badge.textContent = anonymousCredits + ' credits';
+  badge.style.display = 'inline-block';
+}
+
+// ══════════════════════════════════════════════════════════════
+// Payment System
+// ══════════════════════════════════════════════════════════════
+
+let selectedPackage = null;
+let selectedPaymentMethod = null;
+
+function openPaymentModal() {
+  document.getElementById('paymentModal').classList.add('active');
+  document.body.style.overflow = 'hidden';
+  
+  // Show appropriate credit balance
+  const credits = currentUser ? userCredits : anonymousCredits;
+  document.getElementById('currentCredits').textContent = credits;
+  
+  loadCreditPackages();
+}
+
+function closePaymentModal() {
+  document.getElementById('paymentModal').classList.remove('active');
+  document.body.style.overflow = '';
+  selectedPackage = null;
+  selectedPaymentMethod = null;
+  document.getElementById('paymentForm').style.display = 'none';
+}
+
+function loadCreditPackages() {
+  const packages = [
+    { id: 'basic', credits: 100, price: 49, label: 'Basic' },
+    { id: 'standard', credits: 500, price: 199, label: 'Standard', popular: true },
+    { id: 'premium', credits: 2000, price: 699, label: 'Premium' }
+  ];
+  
+  const container = document.getElementById('creditPackages');
+  container.innerHTML = packages.map(pkg => `
+    <div class="credit-package ${pkg.popular ? 'popular' : ''}" onclick="selectPackage('${pkg.id}', ${pkg.credits}, ${pkg.price})">
+      <div class="credit-amount">${pkg.credits}</div>
+      <div class="credit-price">₹${pkg.price}</div>
+      <div style="font-size:12px;color:var(--muted)">${pkg.label}</div>
+    </div>
+  `).join('');
+}
+
+function selectPackage(id, credits, price) {
+  selectedPackage = { id, credits, price };
+  document.querySelectorAll('.credit-package').forEach(p => p.style.borderColor = '');
+  event.currentTarget.style.borderColor = 'var(--accent)';
+  document.getElementById('paymentForm').style.display = 'block';
+}
+
+function selectPaymentMethod(method) {
+  selectedPaymentMethod = method;
+  document.querySelectorAll('.payment-method-btn').forEach(b => b.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  
+  document.getElementById('upiForm').style.display = method === 'upi' ? 'block' : 'none';
+  document.getElementById('cardForm').style.display = method === 'card' ? 'block' : 'none';
+}
+
+async function processPayment(method) {
+  if (!selectedPackage) return;
+  
+  const btn = event.target;
+  btn.disabled = true;
+  btn.textContent = 'Processing...';
+  
+  try {
+    // For anonymous users, just simulate payment and store in localStorage
+    if (!currentUser) {
+      // Simulate processing delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Add credits to anonymous balance
+      anonymousCredits += selectedPackage.credits;
+      localStorage.setItem('anonymousCredits', anonymousCredits);
+      
+      // Show credits in UI
+      showAnonymousCredits();
+      
+      alert(`Payment successful! Added ${selectedPackage.credits} credits to your anonymous account.`);
+      closePaymentModal();
+      
+      btn.disabled = false;
+      btn.textContent = method === 'upi' ? 'Pay via UPI' : 'Pay via Card';
+      return;
+    }
+    
+    // For logged-in users, call the API
+    const res = await fetch('/api/payment/process', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + authToken
+      },
+      body: JSON.stringify({
+        package_id: selectedPackage.id,
+        credits: selectedPackage.credits,
+        amount: selectedPackage.price,
+        method: method,
+        details: method === 'upi' ? { upi_id: document.getElementById('upiId').value } : {
+          card_number: document.getElementById('cardNumber').value,
+          expiry: document.getElementById('cardExpiry').value,
+          cvv: document.getElementById('cardCvv').value
+        }
+      })
+    });
+    
+    const data = await res.json();
+    
+    if (res.ok) {
+      userCredits += selectedPackage.credits;
+      updateUIForLoggedInUser();
+      alert(`Payment successful! Added ${selectedPackage.credits} credits.`);
+      closePaymentModal();
+    } else {
+      alert(data.error || 'Payment failed');
+    }
+  } catch (e) {
+    alert('Payment processing error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = method === 'upi' ? 'Pay via UPI' : 'Pay via Card';
+  }
+}
+
+// Close payment modal on overlay click
+document.getElementById('paymentModal').addEventListener('click', function(e) {
+  if (e.target === this) {
+    closePaymentModal();
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
 // Utils
 // ══════════════════════════════════════════════════════════════
 function esc(s) {
   return String(s??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
 }
 </script>
+
+<!-- Product Detail Modal -->
+<div id="detailModal" class="modal-overlay" onclick="closeDetailModal(event)">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h3 class="modal-title" id="modalTitle">Product Details</h3>
+      <button class="modal-close" onclick="closeDetailModal()">&times;</button>
+    </div>
+    <div class="modal-body" id="modalBody">
+      <!-- Populated dynamically -->
+    </div>
+  </div>
+</div>
+
 </body>
 </html>

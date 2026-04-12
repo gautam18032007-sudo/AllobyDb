@@ -14,24 +14,75 @@ def nl_to_sql(question: str) -> dict:
     question_lower = question.lower()
     
     # Predefined SQL patterns for common questions
+    # Most queries now return up to 50 results to show full dataset
     patterns = {
         "most expensive": "SELECT * FROM products ORDER BY price DESC LIMIT 1",
+        "most expensive product": "SELECT * FROM products ORDER BY price DESC LIMIT 1",
         "cheapest": "SELECT * FROM products ORDER BY price ASC LIMIT 1",
-        "highest rating": "SELECT * FROM products ORDER BY rating DESC LIMIT 5",
-        "top 5 highest rated": "SELECT * FROM products ORDER BY rating DESC LIMIT 5",
-        "top rated": "SELECT * FROM products ORDER BY rating DESC LIMIT 5",
-        "lowest rating": "SELECT * FROM products ORDER BY rating ASC LIMIT 1",
-        "electronics": "SELECT * FROM products WHERE category = 'Electronics' ORDER BY price",
-        "kitchen": "SELECT * FROM products WHERE category = 'Kitchen' ORDER BY price",
-        "sports": "SELECT * FROM products WHERE category = 'Sports' ORDER BY price",
-        "furniture": "SELECT * FROM products WHERE category = 'Furniture' ORDER BY price",
-        "home": "SELECT * FROM products WHERE category = 'Home' ORDER BY price",
-        "under $100": "SELECT * FROM products WHERE price < 100 ORDER BY price",
-        "under 100": "SELECT * FROM products WHERE price < 100 ORDER BY price",
-        "low stock": "SELECT * FROM products WHERE stock < 20 ORDER BY stock",
-        "all products": "SELECT * FROM products ORDER BY name",
+        "cheapest product": "SELECT * FROM products ORDER BY price ASC LIMIT 1",
+        "highest rating": "SELECT * FROM products ORDER BY rating DESC LIMIT 50",
+        "top 5 highest rated": "SELECT * FROM products ORDER BY rating DESC LIMIT 50",
+        "top rated": "SELECT * FROM products ORDER BY rating DESC LIMIT 50",
+        "lowest rating": "SELECT * FROM products ORDER BY rating ASC LIMIT 50",
+        "electronics": "SELECT * FROM products WHERE category = 'Electronics' ORDER BY price LIMIT 50",
+        "kitchen": "SELECT * FROM products WHERE category = 'Kitchen' ORDER BY price LIMIT 50",
+        "sports": "SELECT * FROM products WHERE category = 'Sports' ORDER BY price LIMIT 50",
+        "furniture": "SELECT * FROM products WHERE category = 'Furniture' ORDER BY price LIMIT 50",
+        "home": "SELECT * FROM products WHERE category = 'Home' ORDER BY price LIMIT 50",
+        "gaming": "SELECT * FROM products WHERE category = 'Gaming' ORDER BY price LIMIT 50",
+        "books": "SELECT * FROM products WHERE category = 'Books' ORDER BY price LIMIT 50",
+        "clothing": "SELECT * FROM products WHERE category = 'Clothing' ORDER BY price LIMIT 50",
+        "health": "SELECT * FROM products WHERE category = 'Health' ORDER BY price LIMIT 50",
+        "beauty": "SELECT * FROM products WHERE category = 'Beauty' ORDER BY price LIMIT 50",
+        "outdoor": "SELECT * FROM products WHERE category = 'Outdoor' ORDER BY price LIMIT 50",
+        "office": "SELECT * FROM products WHERE category = 'Office' ORDER BY price LIMIT 50",
+        "pet": "SELECT * FROM products WHERE category = 'Pet' ORDER BY price LIMIT 50",
+        "kids": "SELECT * FROM products WHERE category = 'Kids' ORDER BY price LIMIT 50",
+        "audio": "SELECT * FROM products WHERE category = 'Audio' ORDER BY price LIMIT 50",
+        "camera": "SELECT * FROM products WHERE category = 'Camera' ORDER BY price LIMIT 50",
+        "fitness": "SELECT * FROM products WHERE category = 'Fitness' ORDER BY price LIMIT 50",
+        "jewelry": "SELECT * FROM products WHERE category = 'Jewelry' ORDER BY price LIMIT 50",
+        "watches": "SELECT * FROM products WHERE category = 'Watches' ORDER BY price LIMIT 50",
+        "shoes": "SELECT * FROM products WHERE category = 'Shoes' ORDER BY price LIMIT 50",
+        "bags": "SELECT * FROM products WHERE category = 'Bags' ORDER BY price LIMIT 50",
+        "tools": "SELECT * FROM products WHERE category = 'Tools' ORDER BY price LIMIT 50",
+        "garden": "SELECT * FROM products WHERE category = 'Garden' ORDER BY price LIMIT 50",
+        "automotive": "SELECT * FROM products WHERE category = 'Automotive' ORDER BY price LIMIT 50",
+        "musical": "SELECT * FROM products WHERE category = 'Musical' ORDER BY price LIMIT 50",
+        "art": "SELECT * FROM products WHERE category = 'Art' ORDER BY price LIMIT 50",
+        "collectibles": "SELECT * FROM products WHERE category = 'Collectibles' ORDER BY price LIMIT 50",
+        "toys": "SELECT * FROM products WHERE category = 'Toys' ORDER BY price LIMIT 50",
+        "phone": "SELECT * FROM products WHERE category = 'Phone' OR name LIKE '%phone%' ORDER BY price LIMIT 50",
+        "laptop": "SELECT * FROM products WHERE name LIKE '%laptop%' OR name LIKE '%bag%' OR name LIKE '%case%' ORDER BY price LIMIT 50",
+        "desk": "SELECT * FROM products WHERE name LIKE '%desk%' OR name LIKE '%lamp%' OR name LIKE '%light%' ORDER BY price LIMIT 50",
+        "speaker": "SELECT * FROM products WHERE name LIKE '%speaker%' OR name LIKE '%audio%' ORDER BY price LIMIT 50",
+        "coffee": "SELECT * FROM products WHERE name LIKE '%coffee%' ORDER BY price LIMIT 50",
+        "running": "SELECT * FROM products WHERE name LIKE '%running%' OR name LIKE '%shoe%' OR category = 'Sports' ORDER BY price LIMIT 50",
+        "camping": "SELECT * FROM products WHERE name LIKE '%camp%' OR name LIKE '%outdoor%' ORDER BY price LIMIT 50",
+        "under $100": "SELECT * FROM products WHERE price < 100 ORDER BY price LIMIT 50",
+        "under 100": "SELECT * FROM products WHERE price < 100 ORDER BY price LIMIT 50",
+        "under $50": "SELECT * FROM products WHERE price < 50 ORDER BY price LIMIT 50",
+        "under 50": "SELECT * FROM products WHERE price < 50 ORDER BY price LIMIT 50",
+        "under $30": "SELECT * FROM products WHERE price < 30 ORDER BY price LIMIT 50",
+        "under 30": "SELECT * FROM products WHERE price < 30 ORDER BY price LIMIT 50",
+        "under $25": "SELECT * FROM products WHERE price < 25 ORDER BY price LIMIT 50",
+        "under 25": "SELECT * FROM products WHERE price < 25 ORDER BY price LIMIT 50",
+        "under $150": "SELECT * FROM products WHERE price < 150 ORDER BY price LIMIT 50",
+        "under 150": "SELECT * FROM products WHERE price < 150 ORDER BY price LIMIT 50",
+        "above $200": "SELECT * FROM products WHERE price > 200 ORDER BY price LIMIT 50",
+        "above 200": "SELECT * FROM products WHERE price > 200 ORDER BY price LIMIT 50",
+        "above $100": "SELECT * FROM products WHERE price > 100 ORDER BY price LIMIT 50",
+        "above 100": "SELECT * FROM products WHERE price > 100 ORDER BY price LIMIT 50",
+        "low stock": "SELECT * FROM products WHERE stock < 20 ORDER BY stock LIMIT 50",
+        "high stock": "SELECT * FROM products WHERE stock > 50 ORDER BY stock LIMIT 50",
+        "all products": "SELECT * FROM products ORDER BY name LIMIT 50",
+        "sorted by name": "SELECT * FROM products ORDER BY name LIMIT 50",
         "how many": "SELECT COUNT(*) as total, category FROM products GROUP BY category",
         "total stock": "SELECT SUM(stock) as total_stock FROM products",
+        "average price": "SELECT category, AVG(price) as avg_price FROM products GROUP BY category",
+        "avg price": "SELECT category, AVG(price) as avg_price FROM products GROUP BY category",
+        "price descending": "SELECT * FROM products ORDER BY price DESC LIMIT 50",
+        "price ascending": "SELECT * FROM products ORDER BY price ASC LIMIT 50",
     }
 
     # Check for simple patterns first
@@ -44,30 +95,42 @@ def nl_to_sql(question: str) -> dict:
     price_range = re.search(r'between\s+\$?(\d+)\s+and\s+\$?(\d+)', question_lower)
     if price_range:
         low, high = price_range.groups()
-        return {"sql": f"SELECT * FROM products WHERE price BETWEEN {low} AND {high} ORDER BY price", "error": None}
+        return {"sql": f"SELECT * FROM products WHERE price BETWEEN {low} AND {high} ORDER BY price LIMIT 50", "error": None}
 
     # Check for rating comparisons
     rating_above = re.search(r'rating\s+(above|over|>|greater\s+than)\s+(\d+\.?\d*)', question_lower)
     if rating_above:
         rating = rating_above.group(2)
-        return {"sql": f"SELECT * FROM products WHERE rating > {rating} ORDER BY rating DESC", "error": None}
+        return {"sql": f"SELECT * FROM products WHERE rating > {rating} ORDER BY rating DESC LIMIT 50", "error": None}
 
     rating_below = re.search(r'rating\s+(below|under|<|less\s+than)\s+(\d+\.?\d*)', question_lower)
     if rating_below:
         rating = rating_below.group(2)
-        return {"sql": f"SELECT * FROM products WHERE rating < {rating} ORDER BY rating", "error": None}
+        return {"sql": f"SELECT * FROM products WHERE rating < {rating} ORDER BY rating LIMIT 50", "error": None}
 
     # Check for price comparisons
     price_above = re.search(r'price\s+(above|over|>|greater\s+than)\s+\$?(\d+)', question_lower)
     if price_above:
         price = price_above.group(2)
-        return {"sql": f"SELECT * FROM products WHERE price > {price} ORDER BY price", "error": None}
+        return {"sql": f"SELECT * FROM products WHERE price > {price} ORDER BY price LIMIT 50", "error": None}
 
     price_below = re.search(r'price\s+(below|under|<|less\s+than)\s+\$?(\d+)', question_lower)
     if price_below:
         price = price_below.group(2)
-        return {"sql": f"SELECT * FROM products WHERE price < {price} ORDER BY price", "error": None}
-
+        return {"sql": f"SELECT * FROM products WHERE price < {price} ORDER BY price LIMIT 50", "error": None}
+    
+    # Check for stock comparisons
+    stock_below = re.search(r'stock\s+(below|under|<|less\s+than)\s+(\d+)', question_lower)
+    if stock_below:
+        stock = stock_below.group(2)
+        return {"sql": f"SELECT * FROM products WHERE stock < {stock} ORDER BY stock LIMIT 50", "error": None}
+    
+    # Check for each category query
+    categories = ["electronics", "kitchen", "sports", "furniture", "home", "gaming", "books", "clothing", "health", "beauty", "outdoor", "office", "pet", "kids", "audio", "camera", "fitness", "jewelry", "watches", "shoes", "bags", "tools", "garden", "automotive", "musical", "art", "collectibles", "toys"]
+    for cat in categories:
+        if cat in question_lower and ("show" in question_lower or "all" in question_lower or "products" in question_lower):
+            return {"sql": f"SELECT * FROM products WHERE category = '{cat.capitalize()}' ORDER BY price LIMIT 50", "error": None}
+    
     # Default fallback
     return {
         "sql": None,
